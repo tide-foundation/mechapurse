@@ -1,22 +1,22 @@
 {
-    "realm": "nextjs-test",
-    "auth-server-url": "http://localhost:8080/",
-    "ssl-required": "external",
-    "resource": "myclient",
-    "public-client": true,
-    "confidential-port": 0,
-    "jwk": {
-      "keys": [
-        {
-          "kid": "K9XbDsbJHm05ozgty1gl-Gpo7SljbI_Woe8NeXggkzY",
-          "kty": "OKP",
-          "alg": "EdDSA",
-          "use": "sig",
-          "crv": "Ed25519",
-          "x": "ViFBWgoA9ucxHdrfFwbei4vqT1X5asFms2JZ3-0x9-M"
-        }
-      ]
-    },
-    "vendorId": "966362755135488296023189842400673387493658789187026381396395242852112657457",
-    "homeOrkUrl": "https://ork1.tideprotocol.com"
-  }
+  "realm": "nextjs-test",
+  "auth-server-url": "http://localhost:8080/",
+  "ssl-required": "external",
+  "resource": "myclient",
+  "public-client": true,
+  "confidential-port": 0,
+  "jwk": {
+    "keys": [
+      {
+        "kid": "gDUJ2fdxTNJ8mavNCoOIjCLjMZeLquYekNy3mkomZf8",
+        "kty": "OKP",
+        "alg": "EdDSA",
+        "use": "sig",
+        "crv": "Ed25519",
+        "x": "O--E7R_UW6MaaaJx94lyBr-8BaFH9I4nypMY6tODjsM"
+      }
+    ]
+  },
+  "vendorId": "1591551855244654892021019155505845878591767584813998170751252447595790505346",
+  "homeOrkUrl": "https://ork1.tideprotocol.com"
+}

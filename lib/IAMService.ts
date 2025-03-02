@@ -1,18 +1,27 @@
 import Heimdall from "tidecloak-js"
 import kcData from "../tidecloak.json";
+import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
 
 let _tc: typeof Heimdall | null = null;
 
 function getKeycloakClient(): typeof Heimdall {
     if (!_tc) {
+        console.log("[DEBUG] Initializing Heimdall client...");
         _tc = new Heimdall({
-            url: kcData["auth-server-url"],
-            realm: kcData["realm"],
-            clientId: kcData["resource"],
+            url: getAuthServerUrl(),
+            realm: getRealm(),
+            clientId: getResource(),
         });
+
+        if (!_tc) {
+            console.error("[ERROR] Heimdall client failed to initialize!");
+        } else {
+            console.log("[DEBUG] Heimdall client initialized:", _tc);
+        }
     }
     return _tc;
 }
+
 
 export const updateIAMToken = async (): Promise<void> => {
     const keycloak = getKeycloakClient();
@@ -45,35 +54,52 @@ export const updateIAMToken = async (): Promise<void> => {
     }
 }
 
-export const initIAM = (onReadyCallback?: (authenticated: boolean) => void): void => {
-    const keycloak = getKeycloakClient();
-    if (typeof window === "undefined") {
-        return;
-    }
+export const initIAM = async (onReadyCallback?: (authenticated: boolean) => void): Promise<void> => {
+    try {
+        const keycloak = await getKeycloakClient();
 
-    keycloak.onTokenExpired = async () => {
-        await updateIAMToken();
-    };
+        if (typeof window === "undefined") {
+            return;
+        }
 
-    if (!keycloak.didInitialize) {
-        console.log(window.location.origin)
-        keycloak
-            .init({
-                onLoad: "check-sso",
-                silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-                pkceMethod: "S256",
-            })
-            .then((authenticated: boolean) => {
-                if (authenticated && keycloak.token) {
-                    document.cookie = `kcToken=${keycloak.token}; path=/;`;
-                }
-                if (onReadyCallback) {
-                    onReadyCallback(authenticated);
-                }
-            })
-            .catch((err: any) => console.error("Keycloak init error:", err));
+        if (keycloak.didInitialize) {
+            if (onReadyCallback) onReadyCallback(keycloak.authenticated ?? false);
+            return;
+        }
+
+
+        // Ensure token refresh automatically
+        keycloak.onTokenExpired = async () => {
+            console.log("[DEBUG] Token expired, attempting refresh...");
+            try {
+                await updateIAMToken();
+                console.log("[DEBUG] Token successfully refreshed.");
+            } catch (refreshError) {
+                console.error("[ERROR] Failed to refresh token:", refreshError);
+            }
+        };
+
+        // Run Keycloak initialization
+        const authenticated = await keycloak.init({
+            onLoad: "check-sso",
+            silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+            pkceMethod: "S256",
+        });
+
+        console.log("[DEBUG] Keycloak authentication result:", authenticated);
+
+        // Store token if authenticated
+        if (authenticated && keycloak.token) {
+            document.cookie = `kcToken=${keycloak.token}; path=/; Secure; SameSite=Strict`;
+        }
+        if (onReadyCallback) onReadyCallback(authenticated);
+    } catch (err) {
+        console.error("[ERROR] Keycloak initialization failed:", err);
+        throw new Error("[ERROR] Keycloak initialization failed:" + err)
     }
 };
+
+
 
 export const doLogin = (): void => {
     const keycloak = getKeycloakClient();
