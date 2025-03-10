@@ -62,9 +62,8 @@ export default function Send() {
         body: JSON.stringify({ recipient, amount }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(err => console.error("Failed to parse JSON:", err));
       if (!response.ok) throw new Error(data.error || "Transaction failed");
-
       setTransactionResult(data);
     } catch (err: any) {
       setError(err.message);

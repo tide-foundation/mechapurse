@@ -1,4 +1,4 @@
-import Heimdall from "tidecloak-js"
+import Heimdall, { BaseTideRequest, CardanoTxBodySignRequest, CreateCardanoTxBodySignRequest } from "tidecloak-js"
 import kcData from "../tidecloak.json";
 import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
 
@@ -11,6 +11,8 @@ function getKeycloakClient(): typeof Heimdall {
             url: getAuthServerUrl(),
             realm: getRealm(),
             clientId: getResource(),
+            vendorId: kcData['vendorId'],
+            homeOrkUrl: kcData['homeOrkUrl']
         });
 
         if (!_tc) {
@@ -159,6 +161,13 @@ export const hasOneRole = (role: string): boolean => {
     return keycloak.hasRealmRole(role);
 };
 
+export const signModel = async (dataToAuthorize: string, proof: string, vvkId: string) => {
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+
+    return await tidecloak.signModel(vvkId, dataToAuthorize, proof);
+}
+
 const IAMService = {
     initIAM,
     doLogin,
@@ -168,6 +177,7 @@ const IAMService = {
     getName,
     hasOneRole,
     getTokenExp,
+    signModel
 };
 
 export default IAMService;
