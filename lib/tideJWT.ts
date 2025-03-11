@@ -39,8 +39,6 @@ export async function verifyTideCloakToken(token: string, allowedRole: string): 
             issuer: thisIssuer,
         });
 
-        console.log(payload)
-
         if (!payload || typeof payload !== "object") {
             throw new Error("Invalid token payload");
         }

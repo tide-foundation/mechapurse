@@ -1,8 +1,7 @@
 "use client";
 
 import IAMService from "@/lib/IAMService";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function Home() {
     useEffect(() => {
@@ -12,43 +11,33 @@ export default function Home() {
                     window.location.href = "/auth/redirect";
                 }
             });
-        }
-        init()
+        };
+        init();
     }, []);
 
-
-    const handleLogin = (e: { preventDefault: () => void; }) => {
-        e.preventDefault();
+    const handleLogin = () => {
         IAMService.doLogin();
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-800 text-white font-sans">
-            <div className="flex flex-col items-center justify-center min-h-screen p-4">
-                <div className="w-full max-w-md">
-                    <div className="text-center mb-12">
-                        <h1 className="text-5xl font-bold mb-2">Tide Wallet</h1>
-                    </div>
+        <main className="flex flex-col items-center justify-center min-h-screen px-6 py-12 w-full font-['Inter'] bg-gradient-to-b from-blue-900 to-blue-800">
+            <div className="w-full max-w-lg bg-gradient-to-b from-[#1E3A8A] to-[#233A73] rounded-xl p-8 shadow-lg border border-blue-700 text-white text-center">
+                {/* Wallet Logo */}
+                <h1 className="text-5xl font-bold mb-6">Tide Wallet</h1>
 
-                    <div className="bg-blue-700 rounded-xl shadow-2xl p-8 backdrop-blur-sm bg-opacity-30 border border-blue-600">
-                        {/* <h2 className="text-2xl font-semibold mb-6 text-center">
-                          Welcome to Your Crypto Kingdom
-                      </h2> */}
-                        {/* <p className="text-blue-200 mb-8 text-center">
-                          Manage your digital assets
-                      </p> */}
+                {/* Login Button */}
+                <button
+                    onClick={handleLogin}
+                    className="w-full py-4 bg-[#2979FF] hover:bg-[#1E6AE1] text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                    Login to Wallet
+                </button>
 
-                        <div className="space-y-4">
-                            <button
-                                onClick={handleLogin}
-                                className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                            >
-                                Login to Wallet
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                {/* Tagline */}
+                <p className="mt-6 text-blue-300 text-sm">
+                    Securely manage your Cardano assets.
+                </p>
             </div>
-        </div>
+        </main>
     );
 }

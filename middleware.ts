@@ -1,56 +1,37 @@
-// an example nextJS middleware router that does server-side validation on all traffic to secure pages
 import { NextRequest, NextResponse } from "next/server";
-import { verifyTideCloakToken } from './lib/tideJWT';
-
-// Developer should list all secure pages and their respective allowed roles
-const routesRoles = [
-  { URLStart: "/authenticated", role: 'appUser' },
-  //{ URLStart: "/protected/dob", role: 'offline_access' },
-];
+import { verifyTideCloakToken } from "@/lib/tideJWT";
+import { routeRoleMapping } from "./lib/authConfig";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  var requiredRole = null;
+  // Determine required role from config
+  const requiredRole = Object.keys(routeRoleMapping).find(route => pathname.startsWith(route));
+  if (!requiredRole) return NextResponse.next(); // Skip if not a protected route
 
-  for (const { URLStart, role } of routesRoles) {
-    if (pathname.startsWith(URLStart)) {
-      requiredRole = role;
-      console.debug("[Middleware] Found role " + requiredRole);
-      break;
-    }
-  }
+  console.debug(`[Middleware] Protecting: ${pathname} | Required Role: ${routeRoleMapping[requiredRole]}`);
 
-  // Only protect routes starting with /protected
-  if (requiredRole == null) {
-    console.debug("[Middleware] skip next");
-    return NextResponse.next();
+  const token = req.cookies.get("kcToken")?.value;
+  if (!token) {
+    console.warn("[Middleware] No token found. Redirecting to /login.");
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   try {
-    // Extract token from cookie "kcToken"
-    const token = req.cookies?.get('kcToken')?.value;
+    // Verify the token for the required role
+    const user = await verifyTideCloakToken(token, routeRoleMapping[requiredRole]);
+    if (!user) throw new Error("Invalid or expired token.");
 
-    if (!token) {
-      console.debug("[Middleware] No token found -> redirecting to /");
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+    console.debug("[Middleware] Token verified. Access granted.");
 
-    const user = await verifyTideCloakToken(token, requiredRole);
+    return NextResponse.next();
 
-    if (user) {
-      return NextResponse.next();
-    }
-
-    throw "Token verification failed.";
   } catch (err) {
-    console.error("[Middleware] ", err);
-    return NextResponse.redirect(new URL("/fail", req.url));
+    console.error("[Middleware] Token verification failed:", err);
+    return NextResponse.redirect(new URL("/auth/failure", req.url));
   }
-
 }
 
-//Which routes the middleware should run on:
 export const config = {
-  matcher: ["/authenticated/:path*"],
+  matcher: ["/authenticated/:path*", "/admin/:path*", "/moderator/:path*"], // Protect multiple routes
 };

@@ -3,10 +3,11 @@ import { createTransactionBuilder } from "@/lib/transactionBuilderConfig";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { Roles } from "@/app/constants/roles";
 import { base64UrlToBytes } from "@/lib/tideSerialization";
-import { getAuthServerUrl, getPublicKey } from "@/lib/tidecloakConfig";
+import { getPublicKey } from "@/lib/tidecloakConfig";
 import { BigNum, Ed25519Signature, FixedTransaction, Vkey } from "@emurgo/cardano-serialization-lib-browser";
-import { base64ToBytes, bytesToBase64, CardanoTxBodySignRequest, CreateCardanoTxBodySignRequest, StringFromUint8Array } from "tidecloak-js";
-import { getRoleInitCert, getTideVendorKeyConfig, InitCertResponse, signMessage, signTx } from "@/lib/tidecloakApi";
+import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
+import { signTx } from "@/lib/tidecloakApi";
+import { cookies } from "next/headers";
 
 
 const allowedRole = Roles.User;
@@ -91,7 +92,7 @@ async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<st
         if (!response.ok) {
             // 🔹 Log full response details
             const errorBody = await response.text();
-            console.error(`❌ Error Response from Koios:`, {
+            console.error(`Error Response from Koios:`, {
                 status: response.status,
                 statusText: response.statusText,
                 body: errorBody
@@ -100,10 +101,10 @@ async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<st
         }
 
         const txHash = await response.text();
-        console.log("✅ Transaction Submitted! TX Hash:", txHash);
+        console.log("Transaction Submitted! TX Hash:", txHash);
         return txHash;
     } catch (error) {
-        console.error("🚨 Error submitting transaction:", error);
+        console.error("Error submitting transaction:", error);
         throw error;
     }
 }
@@ -138,16 +139,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Verify authorization token
-        const authHeader = req.headers.get("Authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        const cookieStore = cookies();
+        const token = (await cookieStore).get("kcToken")?.value;
+
+        if (!token) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        const token = authHeader.split(" ")[1];
         const user = await verifyTideCloakToken(token, allowedRole);
-        if (!user) {
-            return NextResponse.json({ error: "Invalid token" }, { status: 403 });
-        }
+        if (!user) throw new Error("Invalid token");
 
         // Generate sender address from public key
         const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
@@ -196,7 +195,7 @@ export async function POST(req: NextRequest) {
         const txBody = txBuilder.build()
         const txBase64 = bytesToBase64(txBody.to_bytes());
 
-        const test = await signTx(txBase64, "c7f17fc4-bf8a-446c-9d05-211610ec6077", token);
+        const test = await signTx(txBase64, "a90403d2-6524-415e-8988-b7b417f1dddc", token);
 
         const txHash = FixedTransaction.new_from_body_bytes(txBody.to_bytes());
         // add keyhash witnesses
@@ -218,11 +217,13 @@ export async function POST(req: NextRequest) {
             undefined, // transaction metadata
         );
 
+        console.log({ transaction: txBody.to_hex(), hash: txHash.transaction_hash().to_hex() })
 
-        await submitSignedTransaction(transaction.to_bytes());
+
+        const result = await submitSignedTransaction(transaction.to_bytes());
 
 
-        return NextResponse.json({ transaction: txBase64, signature: test, hash: txHash.transaction_hash().to_hex() });
+        return NextResponse.json({ txHash: result });
     } catch (err) {
         console.error("Internal Server Error:", err);
         return NextResponse.json({ error: "Internal Server Error: " + err }, { status: 500 });
