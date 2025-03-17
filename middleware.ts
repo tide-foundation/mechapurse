@@ -5,11 +5,13 @@ import { routeRoleMapping } from "./lib/authConfig";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Determine required role from config
-  const requiredRole = Object.keys(routeRoleMapping).find(route => pathname.startsWith(route));
-  if (!requiredRole) return NextResponse.next(); // Skip if not a protected route
+  // Determine required roles from config
+  const requiredRolesPath = Object.keys(routeRoleMapping).find(route => pathname.startsWith(route));
+  if (!requiredRolesPath) return NextResponse.next(); // Skip if not a protected route
 
-  console.debug(`[Middleware] Protecting: ${pathname} | Required Role: ${routeRoleMapping[requiredRole]}`);
+  const requiredRoles = routeRoleMapping[requiredRolesPath]; // Array of roles
+
+  console.debug(`[Middleware] Protecting: ${pathname} | Allowed Roles: ${requiredRoles}`);
 
   const token = req.cookies.get("kcToken")?.value;
   if (!token) {
@@ -18,12 +20,11 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    // Verify the token for the required role
-    const user = await verifyTideCloakToken(token, routeRoleMapping[requiredRole]);
+    // Verify token for any of the allowed roles
+    const user = await verifyTideCloakToken(token, requiredRoles);
     if (!user) throw new Error("Invalid or expired token.");
 
     console.debug("[Middleware] Token verified. Access granted.");
-
     return NextResponse.next();
 
   } catch (err) {
@@ -33,5 +34,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/authenticated/:path*", "/admin/:path*", "/moderator/:path*"], // Protect multiple routes
+  matcher: ["/authenticated/:path*", "/api/:path*", "/moderator/:path*"], // Protect multiple routes
 };

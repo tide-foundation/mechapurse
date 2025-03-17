@@ -6,6 +6,7 @@ import IAMService from "@/lib/IAMService";
 interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
+    hasRole: (role: string, clientId?: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,8 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initAuth();
     }, []);
 
+    const hasRole = (role: string, clientId?: string): boolean => {
+        return IAMService.hasRole(role, clientId);
+    }
+
+
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole }}>
             {children}
         </AuthContext.Provider>
     );

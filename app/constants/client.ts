@@ -1,0 +1,1 @@
+export const TX_MANAGEMENT_CLIENT = "TX_MANAGEMENT";

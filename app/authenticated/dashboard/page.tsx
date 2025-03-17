@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { FaArrowRight, FaArrowLeft, FaWallet, FaCopy, FaCheckCircle, FaClock } from "react-icons/fa";
 import { Transaction } from "@/types/Transactions";
 
-export default function Account() {
+export default function Dashboard() {
     const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [walletAddress, setWalletAddress] = useState("");
@@ -18,7 +18,7 @@ export default function Account() {
 
 
     const getWalletAddress = async () => {
-        return await fetch("/api/account?type=wallet", {
+        return await fetch("/api/dashboard?type=wallet", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -29,7 +29,7 @@ export default function Account() {
     };
 
     const getWalletBalance = async (walletAddress: string) => {
-        return await fetch(`/api/account?type=balance&wallet=${walletAddress}`, {
+        return await fetch(`/api/dashboard?type=balance&wallet=${walletAddress}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -39,7 +39,7 @@ export default function Account() {
     };
 
     const getWalletTransactions = async (walletAddress: string) => {
-        return await fetch(`/api/account?type=transactions&wallet=${walletAddress}`, {
+        return await fetch(`/api/dashboard?type=transactions&wallet=${walletAddress}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

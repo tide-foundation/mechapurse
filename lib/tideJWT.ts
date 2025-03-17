@@ -8,11 +8,16 @@ export interface TokenPayload {
         roles: string[];
     };
     tideuserkey?: string;
-    given_name?: string
+    given_name?: string;
+    resource_access?: {
+        [key: string]: {
+            roles: string[];
+        };
+    };
 }
 
 
-export async function verifyTideCloakToken(token: string, allowedRole: string): Promise<TokenPayload | null> {
+export async function verifyTideCloakToken(token: string, allowedRoles: string[]): Promise<TokenPayload | null> {
     try {
         const jwkData = getJWK();
         if (!jwkData) {
@@ -25,7 +30,7 @@ export async function verifyTideCloakToken(token: string, allowedRole: string): 
         const resource = getResource();
         const realm = getRealm();
 
-        if (JWKS === null) {
+        if (!JWKS) {
             throw new Error("No client adapter config found.");
         }
         if (!token) {
@@ -49,8 +54,12 @@ export async function verifyTideCloakToken(token: string, allowedRole: string): 
             throw new Error(`AZP attribute failed: '${resource}' isn't '${typedPayload.azp}'`);
         }
 
-        if (allowedRole !== "" && (!typedPayload.realm_access?.roles.includes(allowedRole))) {
-            throw new Error(`Role match failed: '${typedPayload.realm_access?.roles}' has no '${allowedRole}'`);
+        const realmAccess = typedPayload.realm_access?.roles || [];
+        const clientAccess = Object.values(typedPayload.resource_access || {}).flatMap(access => access.roles);
+        const allUserRoles = new Set([...realmAccess, ...clientAccess]);
+
+        if (allowedRoles.length > 0 && !allowedRoles.some(role => Array.from(allUserRoles).includes(role))) {
+            throw new Error(`Role match failed: '${typedPayload.realm_access?.roles}' does not contain any of '${allowedRoles}'`);
         }
 
         return typedPayload;
@@ -60,35 +69,6 @@ export async function verifyTideCloakToken(token: string, allowedRole: string): 
     }
 }
 
-// export async function verifyAndDecodeAccessToken(token: string): Promise<TokenPayload | null> {
-//     try {
-//         const jwkData = kcData.jwk;
-//         const JWKS = createLocalJWKSet(jwkData);
+export function hasRole(tokenPayload: string, role: string) {
 
-//         if (!token) {
-//             throw new Error("No token found");
-//         }
-
-//         const issSlash = kcData["auth-server-url"].endsWith("/") ? "" : "/";
-//         const thisIssuer = `${kcData["auth-server-url"]}${issSlash}realms/${kcData["realm"]}`;
-
-//         const { payload } = await jwtVerify(token, JWKS, {
-//             issuer: thisIssuer,
-//         });
-
-//         if (!payload || typeof payload !== "object") {
-//             throw new Error("Invalid token payload");
-//         }
-
-//         const typedPayload = payload as TokenPayload;
-
-//         if (typedPayload.azp !== kcData["resource"]) {
-//             throw new Error(`AZP attribute failed: '${kcData["resource"]}' isn't '${typedPayload.azp}'`);
-//         }
-
-//         return typedPayload;
-//     } catch (err) {
-//         console.error("[TideJWT] Token verification failed:", err);
-//         return null;
-//     }
-// }
+}

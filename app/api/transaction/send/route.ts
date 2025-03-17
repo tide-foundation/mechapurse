@@ -8,9 +8,9 @@ import { BigNum, Ed25519Signature, FixedTransaction, Vkey } from "@emurgo/cardan
 import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
+import { routeRoleMapping } from "@/lib/authConfig";
 
-
-const allowedRole = Roles.User;
+const allowedRoles = [Roles.User, Roles.Admin];
 const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
 
 
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
         if (!token) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const user = await verifyTideCloakToken(token, allowedRole);
+        const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
         // Generate sender address from public key
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
         const txBody = txBuilder.build()
         const txBase64 = bytesToBase64(txBody.to_bytes());
 
-        const test = await signTx(txBase64, "a90403d2-6524-415e-8988-b7b417f1dddc", token);
+        const test = await signTx(txBase64, "3b51f0fe-6feb-4129-af4c-6271a037a2f0", token);
 
         const txHash = FixedTransaction.new_from_body_bytes(txBody.to_bytes());
         // add keyhash witnesses

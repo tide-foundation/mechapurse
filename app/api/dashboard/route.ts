@@ -6,10 +6,14 @@ import { Transaction, TxInput, TxOutput } from "@/types/Transactions";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const allowedRole = Roles.User;
+const allowedRole = [Roles.User, Roles.Admin];
+
 const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
 
 export async function GET(req: NextRequest) {
+    const { pathname } = req.nextUrl;
+
+
     const CardanoWasm = await import("@emurgo/cardano-serialization-lib-browser");
 
     // Verify authorization token

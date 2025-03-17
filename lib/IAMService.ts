@@ -161,6 +161,12 @@ export const hasOneRole = (role: string): boolean => {
     return keycloak.hasRealmRole(role);
 };
 
+export const hasRole = (role: string, client?: string): boolean => {
+    const keycloak = getKeycloakClient();
+
+    return keycloak.hasRealmRole(role) || keycloak.hasResourceRole(role, client);
+}
+
 export const signModel = async (dataToAuthorize: string, proof: string, vvkId: string) => {
     const tidecloak = getKeycloakClient();
     if (!tidecloak) { return null; }
@@ -177,7 +183,8 @@ const IAMService = {
     getName,
     hasOneRole,
     getTokenExp,
-    signModel
+    signModel,
+    hasRole
 };
 
 export default IAMService;

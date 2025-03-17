@@ -1,5 +1,4 @@
 export enum Roles {
-    Admin = "admin",
+    Admin = "tide-realm-admin",
     User = "appUser",
-    Guest = "guest",
 }
