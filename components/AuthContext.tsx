@@ -7,13 +7,18 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     hasRole: (role: string, clientId?: string) => boolean;
+    vuid: string;
+    createTxDraft: (txBody: string) => string;
+
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [vuid, setVuid] = useState<string>("");
+
     useEffect(() => {
         const initAuth = async () => {
             console.log("[DEBUG] Initializing IAM...");
@@ -21,6 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsAuthenticated(authenticated);
                 setIsLoading(false);
             });
+            const vuidFromToken = IAMService.getVuid();
+            setVuid(vuidFromToken ?? "");
         };
         initAuth();
     }, []);
@@ -29,9 +36,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return IAMService.hasRole(role, clientId);
     }
 
+    const createTxDraft = (txBody: string) => {
+        console.log("hello")
+        return IAMService.createTxDraft(txBody);
+    }
+
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft }}>
             {children}
         </AuthContext.Provider>
     );

@@ -10,17 +10,7 @@ export interface Role {
     id: string;
     name: string;
     description?: string;
-    // Role-specific auth info fields (optional)
-    signModels?: string[];
-    threshold?: string;
-    authorizerType?: string;
-}
-
-// For global rules, we work with rule definitions.
-export interface RuleDefinition {
-    field: string;
-    method: string;
-    values: string[];
+    isAuthorizer: boolean
 }
 
 // For role authorization info (used when editing a role)
@@ -29,7 +19,23 @@ export interface AuthorizerInfoRequest {
     threshold: string;
     authorizerType: string;
 }
+
 export interface RulesContainer {
-    settings: { [roleName: string]: RuleDefinition[] };
+    authorizationSettings: { [id: string]: RuleDefinition[] };
+    validationSettings: { [id: string]: RuleDefinition[] };
 }
+
+export interface RuleDefinition {
+    id?: string;
+    field: string;
+    conditions: RuleCondition[];
+    output?: { [key: string]: number };
+}
+
+export interface RuleCondition {
+    method: string;
+    values: string[];
+}
+
+
 

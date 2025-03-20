@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addAuthorizerInfo, createRoleForClient, createTxMgmtClient, getClientByClientId, getClientRoleByName, getTransactionRoles } from "@/lib/tidecloakApi";
+import { addAuthorizerInfo, createRoleForClient, createTxMgmtClient, getClientByClientId, getClientRoleByName, getTransactionRoles, markAsAuthorizerRole } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { cookies } from "next/headers";
 import { Roles } from "@/app/constants/roles";
@@ -62,21 +62,13 @@ export async function POST(req: NextRequest) {
 
 
         }
-
         await createRoleForClient(clientId!, roleRep, token);
 
         if (
-            roleInfo.authorizerType?.trim() &&
-            roleInfo.signModels && roleInfo.signModels.length > 0 &&
-            roleInfo.threshold?.trim()
+            roleInfo.isAuthorizer
         ) {
-            const authInfo: AuthorizerInfoRequest = {
-                signModels: roleInfo.signModels,
-                authorizerType: roleInfo.authorizerType,
-                threshold: roleInfo.threshold
-            };
             const addedRole: RoleRepresentation = await getClientRoleByName(roleInfo.name!, clientId!, token);
-            await addAuthorizerInfo(addedRole.id!, authInfo, token);
+            await markAsAuthorizerRole(addedRole.id!, token);
         }
         return NextResponse.json({ success: "Role has been added!" });
 

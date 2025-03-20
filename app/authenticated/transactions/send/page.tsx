@@ -3,9 +3,14 @@
 import { useState } from "react";
 import { FaPaperPlane, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
 import { ImSpinner8 } from "react-icons/im";
+import { Heimdall } from "../../../../tide-modules/modules/heimdall.js";
+import { useAuth } from "@/components/AuthContext";
+import { createApprovalURI } from "@/lib/tidecloakApi.js";
+
 
 
 export default function Send() {
+  const { vuid, createTxDraft } = useAuth();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [transactionResult, setTransactionResult] = useState<string | null>(null);
@@ -43,8 +48,17 @@ export default function Send() {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Transaction failed");
-      setTransactionResult(`TX Hash: ${data.txHash}`);
-      setSuccessMessage("Transaction successfully submitted!");
+
+      const heimdall = new Heimdall(data.uri, [vuid])
+      console.log(data)
+      const test = createTxDraft(data.data)
+      console.log(test)
+
+      
+      await heimdall.openEnclave();
+
+      // setTransactionResult(`TX Hash: ${data.txHash}`);
+      // setSuccessMessage("Transaction successfully submitted!");
     } catch (err: any) {
       setError(`⚠️ ${err.message}`);
     } finally {

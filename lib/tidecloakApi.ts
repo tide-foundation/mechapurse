@@ -23,6 +23,21 @@ export const getRoleInitCert = async (roleId: string, token: string): Promise<In
     return response.json();
 };
 
+export const createApprovalURI = async (token: string): Promise<any> => {
+    const response = await fetch(`${TC_URL}/tideAdminResources/Create-Approval-URI`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        }
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error creating approval uri: ${response.statusText}`);
+        throw new Error(`Error creating approval uri: ${errorBody}`);
+    }
+    return response.json();
+};
+
 export const getTideVendorKeyConfig = async (token: string): Promise<ComponentRepresentation | null> => {
     const response = await fetch(`${TC_URL}/components?name=tide-vendor-key`, {
         method: 'GET',
@@ -92,14 +107,15 @@ export const getTransactionRoles = async (token: string): Promise<RoleRepresenta
 export const getRealmKeyRules = async (token: string): Promise<RulesContainer> => {
     const tideVendorKeyConfig: ComponentRepresentation | null = await getTideVendorKeyConfig(token);
     if (tideVendorKeyConfig === null || tideVendorKeyConfig.config === undefined) {
-        return { settings: {} };
+        return { authorizationSettings: {}, validationSettings: {} };
     }
     const rules: string = tideVendorKeyConfig.config["rules"]?.[0];
     if (!rules) {
-        return { settings: {} };
+        return { authorizationSettings: {}, validationSettings: {} };
     }
     return JSON.parse(rules);
 };
+
 
 
 export const getClientByClientId = async (
@@ -180,6 +196,42 @@ export const createRoleForClient = async (clientuuid: string, roleRep: RoleRepre
     }
     return;
 };
+
+
+export const markAsAuthorizerRole = async (roleId: string, token: string): Promise<void> => {
+    const response = await fetch(`${TC_URL}/roles-by-id/${roleId}`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error fetching role by roleId: ${response.statusText}`);
+        throw new Error(`Error fetching role by roleId: ${errorBody}`);
+    }
+    const roleRep: RoleRepresentation = await response.json();
+    roleRep.attributes = {
+        ...(roleRep.attributes || {}),
+        "isAuthorizer": ["true"],
+      };
+
+      console.log(roleRep)
+
+    const test = await fetch(`${TC_URL}/roles-by-id/${roleId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(roleRep)
+
+    });
+
+    console.log(test)
+    return;
+};
+
 
 export const addAuthorizerInfo = async (roleId: string, authInfo: AuthorizerInfoRequest, token: string): Promise<void> => {
     console.log(authInfo)

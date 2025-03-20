@@ -143,6 +143,12 @@ export const getName = (): string | undefined => {
     return keycloak.tokenParsed?.preferred_username;
 };
 
+export const getVuid = (): string | undefined => {
+    const keycloak = getKeycloakClient();
+    return keycloak.tokenParsed?.vuid;
+};
+
+
 export const getTokenExp = (): number => {
     const keycloak = getKeycloakClient();
     if (!keycloak) {
@@ -174,6 +180,14 @@ export const signModel = async (dataToAuthorize: string, proof: string, vvkId: s
     return await tidecloak.signModel(vvkId, dataToAuthorize, proof);
 }
 
+export const createTxDraft = (txBody: string) => {
+    console.log(txBody)
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+
+    return  tidecloak.createCardanoTxDraft(txBody);
+}
+
 const IAMService = {
     initIAM,
     doLogin,
@@ -184,7 +198,9 @@ const IAMService = {
     hasOneRole,
     getTokenExp,
     signModel,
-    hasRole
+    hasRole,
+    getVuid,
+    createTxDraft
 };
 
 export default IAMService;
