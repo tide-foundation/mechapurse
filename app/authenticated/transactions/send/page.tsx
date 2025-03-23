@@ -10,13 +10,28 @@ import { createApprovalURI } from "@/lib/tidecloakApi.js";
 
 
 export default function Send() {
-  const { vuid, createTxDraft } = useAuth();
+  const { vuid, createTxDraft, signTxDraft } = useAuth();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [transactionResult, setTransactionResult] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const createAuthorization = async (authorizerApproval: string, authorizerAuthentication: string) => {
+    const response = await fetch("/api/transaction/sign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ authorizerApproval, authorizerAuthentication }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to create authorization");
+
+    return { authorization: data.authorization, ruleSettings: data.ruleSettings };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +53,7 @@ export default function Send() {
     }
 
     try {
-      const response = await fetch("/api/transaction/send", {
+      const response = await fetch("/api/transaction/construct", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,15 +62,29 @@ export default function Send() {
       });
 
       const data = await response.json();
+      const txbody = data.data;
       if (!response.ok) throw new Error(data.error || "Transaction failed");
 
       const heimdall = new Heimdall(data.uri, [vuid])
-      console.log(data)
       const test = createTxDraft(data.data)
-      console.log(test)
+      const staticDate = new Date('2025-03-21T13:00:00Z'); // 1:00pm UTC on 21 March 2025
+      const expiry = (Math.floor(staticDate.getTime() / 1000) + 7 * 24 * 60 * 60).toString(); // 1 week later
 
-      
+      // const expiry = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60).toString(); // one week from now TODO: should be one week from this request!
+
       await heimdall.openEnclave();
+      const authApproval = await heimdall.getAuthorizerApproval(test, "CardanoTx:1", expiry, "base64")
+      console.log(authApproval)
+
+
+      if (authApproval.accepted === true) {
+        const authzAuthn = await heimdall.getAuthorizerAuthentication();
+        const data = await createAuthorization(authApproval.data, authzAuthn);
+        const sig = await signTxDraft(txbody, data.authorization, data.ruleSettings);
+        console.log(sig)
+      }
+
+      await heimdall.closeEnclave();
 
       // setTransactionResult(`TX Hash: ${data.txHash}`);
       // setSuccessMessage("Transaction successfully submitted!");

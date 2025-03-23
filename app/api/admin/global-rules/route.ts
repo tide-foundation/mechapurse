@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Get the rules container that matches your RulesContainer interface.
-        const rules: RulesContainer = await getRealmKeyRules(token);
+        const rules = (await getRealmKeyRules(token)).rules;
         return NextResponse.json(rules);
     } catch (error) {
         console.error("Error fetching roles:", error);

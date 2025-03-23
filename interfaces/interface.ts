@@ -37,5 +37,10 @@ export interface RuleCondition {
     values: string[];
 }
 
+export interface RealmKeyRules {
+    rules: RulesContainer;
+    rulesCert: string;
+}
+
 
 

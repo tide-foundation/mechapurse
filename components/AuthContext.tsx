@@ -9,6 +9,7 @@ interface AuthContextType {
     hasRole: (role: string, clientId?: string) => boolean;
     vuid: string;
     createTxDraft: (txBody: string) => string;
+    signTxDraft: (txBody: string, authorizers: string, ruleSettings: string) => Promise<string>;
 
 }
 
@@ -37,13 +38,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const createTxDraft = (txBody: string) => {
-        console.log("hello")
         return IAMService.createTxDraft(txBody);
     }
 
 
+    const signTxDraft = (txBody: string, authorizers: string, ruleSettings: string) => {
+        return IAMService.signTxDraft(txBody, authorizers, ruleSettings);
+    }
+
+
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft }}>
             {children}
         </AuthContext.Provider>
     );

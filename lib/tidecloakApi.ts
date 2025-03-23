@@ -1,4 +1,4 @@
-import { AuthorizerInfoRequest, RuleDefinition, RulesContainer } from "@/interfaces/interface";
+import { AuthorizerInfoRequest, RealmKeyRules, RuleDefinition, RulesContainer } from "@/interfaces/interface";
 import kcData from "../tidecloak.json";
 import { ClientRepresentation, ComponentRepresentation, RoleRepresentation } from "./keycloakTypes";
 import { TX_MANAGEMENT_CLIENT } from "../app/constants/client";
@@ -37,6 +37,30 @@ export const createApprovalURI = async (token: string): Promise<any> => {
     }
     return response.json();
 };
+
+export const createAuthorization = async (clientId: string, authorizerApproval: string, authorizerAuthentication: string, token: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append("authorizerApproval", authorizerApproval);
+    formData.append("authorizerAuthentication", authorizerAuthentication);
+
+
+    const response = await fetch(`${TC_URL}/tideAdminResources/create-authorization?clientId=${clientId}`, {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: formData
+
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error creating authorization: ${response.statusText}`);
+        throw new Error(`Error creating authorization: ${errorBody}`);
+    }
+    return response.text();
+};
+
 
 export const getTideVendorKeyConfig = async (token: string): Promise<ComponentRepresentation | null> => {
     const response = await fetch(`${TC_URL}/components?name=tide-vendor-key`, {
@@ -104,18 +128,25 @@ export const getTransactionRoles = async (token: string): Promise<RoleRepresenta
     return await response.json();
 };
 
-export const getRealmKeyRules = async (token: string): Promise<RulesContainer> => {
+export const getRealmKeyRules = async (token: string): Promise<RealmKeyRules> => {
     const tideVendorKeyConfig: ComponentRepresentation | null = await getTideVendorKeyConfig(token);
-    if (tideVendorKeyConfig === null || tideVendorKeyConfig.config === undefined) {
-        return { authorizationSettings: {}, validationSettings: {} };
-    }
-    const rules: string = tideVendorKeyConfig.config["rules"]?.[0];
-    if (!rules) {
-        return { authorizationSettings: {}, validationSettings: {} };
-    }
-    return JSON.parse(rules);
-};
 
+    if (!tideVendorKeyConfig?.config) {
+        return {
+            rules: { authorizationSettings: {}, validationSettings: {} },
+            rulesCert: "",
+        };
+    }
+
+    const rulesStr: string | undefined = tideVendorKeyConfig.config["rules"]?.[0];
+    const rulesCertStr: string = tideVendorKeyConfig.config["rulesCert"]?.[0] ?? "";
+
+    const rules: RulesContainer = rulesStr
+        ? JSON.parse(rulesStr)
+        : { authorizationSettings: {}, validationSettings: {} };
+
+    return { rules, rulesCert: rulesCertStr };
+};
 
 
 export const getClientByClientId = async (
@@ -213,10 +244,10 @@ export const markAsAuthorizerRole = async (roleId: string, token: string): Promi
     const roleRep: RoleRepresentation = await response.json();
     roleRep.attributes = {
         ...(roleRep.attributes || {}),
-        "isAuthorizer": ["true"],
-      };
+        "isAuthorizerRole": ["true"],
+    };
 
-      console.log(roleRep)
+    console.log(roleRep)
 
     const test = await fetch(`${TC_URL}/roles-by-id/${roleId}`, {
         method: 'PUT',

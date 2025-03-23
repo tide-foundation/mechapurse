@@ -185,7 +185,15 @@ export const createTxDraft = (txBody: string) => {
     const tidecloak = getKeycloakClient();
     if (!tidecloak) { return null; }
 
-    return  tidecloak.createCardanoTxDraft(txBody);
+    return tidecloak.createCardanoTxDraft(txBody);
+}
+
+export const signTxDraft = async (txBody: string, authorizers: string, ruleSettings: string) => {
+    console.log(txBody)
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+
+    return await tidecloak.signCardanoTx(txBody, authorizers, ruleSettings);
 }
 
 const IAMService = {
@@ -200,7 +208,8 @@ const IAMService = {
     signModel,
     hasRole,
     getVuid,
-    createTxDraft
+    createTxDraft,
+    signTxDraft
 };
 
 export default IAMService;
