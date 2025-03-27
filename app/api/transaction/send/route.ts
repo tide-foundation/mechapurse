@@ -4,7 +4,7 @@ import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { Roles } from "@/app/constants/roles";
 import { base64UrlToBytes } from "@/lib/tideSerialization";
 import { getPublicKey } from "@/lib/tidecloakConfig";
-import { BigNum, Ed25519Signature, FixedTransaction, Vkey } from "@emurgo/cardano-serialization-lib-browser";
+import { BigNum, Ed25519Signature, FixedTransaction, TransactionBody, Vkey } from "@emurgo/cardano-serialization-lib-browser";
 import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { createApprovalURI, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
@@ -122,21 +122,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
 
-        if (!body || !body.recipient || !body.amount) {
-            return NextResponse.json({ error: "Missing recipient or amount" }, { status: 400 });
-        }
-
-        const { recipient, amount } = body;
-        const amountToSend = Number(amount);
-        if (isNaN(amountToSend) || amountToSend <= 0) {
-            return NextResponse.json({ error: "Invalid amount provided." }, { status: 400 });
-        }
-
-        try {
-            CardanoWasm.Address.from_bech32(recipient); // Validate recipient address format
-        } catch (err) {
-            return NextResponse.json({ error: "Invalid recipient address format." }, { status: 400 });
-        }
+        const { txBody, sigBase64 } = body;
 
         // Verify authorization token
         const cookieStore = cookies();
@@ -148,85 +134,47 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        // Generate sender address from public key
         const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
-        const publicKeyHash = publicKey.hash();
-        const enterpriseAddress = CardanoWasm.EnterpriseAddress.new(
-            CardanoWasm.NetworkInfo.testnet_preprod().network_id(),
-            CardanoWasm.Credential.from_keyhash(publicKeyHash)
-        );
-        const enterpriseAddressBech32 = enterpriseAddress.to_address().to_bech32();
-
-        console.log("Sender Enterprise Address:", enterpriseAddressBech32);
-
-        const txUnspentOutputs = await getTxUnspentOutputs(CardanoWasm, enterpriseAddressBech32);
-        const txBuilder = await createTransactionBuilder();
-
-        // Add transaction outputs first
-        txBuilder.add_output(
-            CardanoWasm.TransactionOutput.new(
-                CardanoWasm.Address.from_bech32(recipient),
-                CardanoWasm.Value.new(CardanoWasm.BigNum.from_str((amountToSend * 1_000_000).toString()))
-            )
-        );
-
-        // Now, add inputs after setting outputs
-        txBuilder.add_inputs_from(txUnspentOutputs, 1);
-
-        // Calculate and set transaction fee
-        const minFee = txBuilder.min_fee();
-        const adjustedFee = minFee.checked_add(CardanoWasm.BigNum.from_str("2000"));
-        txBuilder.set_fee(adjustedFee);
-
-
-        // Ensure enough input is selected to cover outputs and fees
-        txBuilder.add_change_if_needed(enterpriseAddress.to_address());
-
-        console.log("Change Address:", enterpriseAddress.to_address().to_bech32());
-
-
-        // 1 slot = 1 second
-        const currentSlot = await getCurrentSlotNumber(CardanoWasm);
-        const slotBuffer = CardanoWasm.BigNum.from_str("7200"); // 1-hour slot buffer
-        const ttl = currentSlot.checked_add(slotBuffer); // Correct BigNum addition
-        txBuilder.set_ttl_bignum(ttl);
-
-        // Build transaction and return hex
-        const txBody = txBuilder.build()
-        const txBase64 = bytesToBase64(txBody.to_bytes());
 
         // const test = await signTx(txBase64, "3b51f0fe-6feb-4129-af4c-6271a037a2f0", token);
 
-        // const txHash = FixedTransaction.new_from_body_bytes(txBody.to_bytes());
-        // // add keyhash witnesses
-        // const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-        // const vKey = Vkey.new(publicKey);
-        // console.log(test);
+        // const txBodyBytes = Buffer.from(txBody, 'hex');
+        // const txHash = FixedTransaction.new_from_body_bytes(txBodyBytes);
+        // add keyhash witnesses
+        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+        const vKey = Vkey.new(publicKey);
 
-        // const sig = Ed25519Signature.from_bytes(base64ToBytes(test));
-        // const vkeyWitness = CardanoWasm.Vkeywitness.new(vKey, sig);
-        // vkeyWitnesses.add(vkeyWitness);
+        console.log("sig !!")
 
-        // const witnesses = CardanoWasm.TransactionWitnessSet.new();
-        // witnesses.set_vkeys(vkeyWitnesses);
+        const sig = Ed25519Signature.from_bytes(base64ToBytes(sigBase64));
+        const vkeyWitness = CardanoWasm.Vkeywitness.new(vKey, sig);
+        vkeyWitnesses.add(vkeyWitness);
 
-        // // create the finalized transaction with witnesses
-        // const transaction = CardanoWasm.Transaction.new(
-        //     txBody,
-        //     witnesses,
-        //     undefined, // transaction metadata
-        // );
+        const witnesses = CardanoWasm.TransactionWitnessSet.new();
+        witnesses.set_vkeys(vkeyWitnesses);
+
+        
+        console.log("here !!")
+        console.log(txBody)
+        const test = TransactionBody.from_bytes(base64ToBytes(txBody));
+
+
+        // create the finalized transaction with witnesses
+        const transaction = CardanoWasm.Transaction.new(
+            test,
+            witnesses,
+            undefined, // transaction metadata
+        );
 
         // console.log({ transaction: txBody.to_hex(), hash: txHash.transaction_hash().to_hex() })
 
-        const approvalUri = await createApprovalURI(token);
+        // const approvalUri = await createApprovalURI(token);
 
-        // const result = await submitSignedTransaction(transaction.to_bytes());
+        const result = await submitSignedTransaction(transaction.to_bytes());
 
 
         // return NextResponse.json({ txHash: result });
-        return NextResponse.json({ data: txBase64, uri: approvalUri.customDomainUri });
-
+        return NextResponse.json({ txHash: result });
     } catch (err) {
         console.error("Internal Server Error:", err);
         return NextResponse.json({ error: "Internal Server Error: " + err }, { status: 500 });

@@ -81,6 +81,19 @@ export default function Send() {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
         const data = await createAuthorization(authApproval.data, authzAuthn);
         const sig = await signTxDraft(txbody, data.authorization, data.ruleSettings);
+        
+        const response = await fetch("/api/transaction/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ txBody: txbody, sigBase64: sig }),
+        });
+
+        const sentResp = await response.json();
+        if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
+        setTransactionResult(`TX Hash: ${sentResp.txHash}`);
+        setSuccessMessage("Transaction successfully submitted!");
         console.log(sig)
       }
 

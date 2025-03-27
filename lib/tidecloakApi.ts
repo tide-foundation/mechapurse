@@ -172,6 +172,28 @@ export const getClientByClientId = async (
     }
 };
 
+export const getClientById = async (
+    id: string,
+    token: string
+): Promise<ClientRepresentation | null> => {
+    try {
+        const response = await fetch(`${TC_URL}/clients/${id}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            console.error(`Error fetching client by id: ${response.statusText}`);
+            return null;
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching client by id:", error);
+        return null;
+    }
+};
+
 export const saveAndSignRules = async (rules: string, token: string): Promise<void> => {
     console.log(JSON.stringify(rules));
     const response = await fetch(`${TC_URL}/vendorResources/sign-rules`, {

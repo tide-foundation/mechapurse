@@ -10,7 +10,9 @@ export interface Role {
     id: string;
     name: string;
     description?: string;
-    isAuthorizer: boolean
+    clientRole?: boolean;
+    clientId?: string;
+    isAuthorizer: boolean;
 }
 
 // For role authorization info (used when editing a role)
@@ -21,19 +23,26 @@ export interface AuthorizerInfoRequest {
 }
 
 export interface RulesContainer {
-    authorizationSettings: { [id: string]: RuleDefinition[] };
-    validationSettings: { [id: string]: RuleDefinition[] };
+    authorizationSettings: { [id: string]: RuleSet };
+    validationSettings: { [id: string]: RuleSet };
+}
+
+export interface RuleSet {
+    ruleSetId?: string;
+    rules: RuleDefinition[];
+    outputs?: { [key: string]: number };
 }
 
 export interface RuleDefinition {
-    id?: string;
+    ruleId?: string;
     field: string;
     conditions: RuleCondition[];
+    aud: string;
     output?: { [key: string]: number };
 }
 
 export interface RuleCondition {
-    method: string;
+    method: string | number;
     values: string[];
 }
 

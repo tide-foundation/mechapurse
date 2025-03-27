@@ -43,6 +43,9 @@ export async function GET(req: NextRequest) {
                 );
                 const enterpriseAddressBech32 = enterpriseAddress.to_address().to_bech32();
                 console.log("[DEBUG] Generated Address:", enterpriseAddressBech32);
+
+                console.log(enterpriseAddress.to_address().to_hex().toUpperCase())
+
                 return NextResponse.json({ address: enterpriseAddressBech32 }, { status: 200 });
 
             case "balance":

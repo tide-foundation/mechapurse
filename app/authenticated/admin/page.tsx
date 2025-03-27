@@ -13,14 +13,33 @@ import { useRouter } from "next/navigation";
 import {
   User,
   Role,
-  RuleDefinition,
   RulesContainer,
+  RuleSet,
+  RuleDefinition,
   RuleCondition,
 } from "@/interfaces/interface";
 
 // --- Constants for rule creation (global rules) ---
-const methods = ["LESS_THAN", "GREATER_THAN", "BETWEEN", "EQUAL_TO"];
-const fields = ["TxHash", "TxIndex", "Amount", "Fee", "TTL"];
+const methods = [
+  "LESS_THAN",
+  "GREATER_THAN",
+  "BETWEEN",
+  "EQUAL_TO",
+  "TOTAL_LESS_THAN",
+  "FILTER_OUT_VALUES_EQUAL_TO",
+  "FILTER_OUT_VALUES_NOT_EQUAL_TO",
+];
+const fields = [
+  "Inputs.TxHash",
+  "Inputs.TxIndex",
+  "Outputs.Address",
+  "Outputs.Amount",
+  "Fee",
+  "TTL",
+];
+
+// Use the same BLIND_SIG_KEY for authorization settings
+const BLIND_SIG_KEY = "BlindSig:1";
 
 export default function AdminDashboard() {
   // Three views: "settings", "users", "roles"
@@ -36,17 +55,14 @@ export default function AdminDashboard() {
 
   // Global Settings state (RulesContainer)
   const [globalSettings, setGlobalSettings] = useState<RulesContainer>({
-    authorizationSettings: { "blindsig:1": [] },
+    authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } },
     validationSettings: {},
   });
   const [globalModalOpen, setGlobalModalOpen] = useState(false);
-  // Local state to track which key's rules are being edited:
-  // For validation, this will be the role name; for authorization, it's fixed to "blindsig:1"
+  // For validation, currentKey is now a structured key (either realm or client)
   const [currentKey, setCurrentKey] = useState<string | null>(null);
-  // State to toggle between editing authorization or validation settings
-  const [globalSettingsType, setGlobalSettingsType] = useState<
-    "authorization" | "validation"
-  >("authorization");
+  // Toggle between editing authorization or validation settings
+  const [globalSettingsType, setGlobalSettingsType] = useState<"authorization" | "validation">("authorization");
 
   const router = useRouter();
 
@@ -90,12 +106,15 @@ export default function AdminDashboard() {
       const response = await fetch("/api/admin/global-rules");
       if (response.ok) {
         const data = await response.json();
-        // For authorizationSettings, we expect only the key "blindsig:1"
+        // data is expected to be a RulesContainer
         setGlobalSettings(
-          data || { authorizationSettings: { "blindsig:1": [] }, validationSettings: {} }
+          data || {
+            authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } },
+            validationSettings: {},
+          }
         );
       } else {
-        setGlobalSettings({ authorizationSettings: { "blindsig:1": [] }, validationSettings: {} });
+        setGlobalSettings({ authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } }, validationSettings: {} });
       }
     } catch (error) {
       console.error("Error fetching global settings:", error);
@@ -168,14 +187,14 @@ export default function AdminDashboard() {
 
   // Open Global Rules Modal for Authorization
   const openGlobalRulesForAuthorization = () => {
-    // Since authorizationSettings is fixed to key "blindsig:1"
-    setCurrentKey("blindsig:1");
+    // Since authorizationSettings is fixed to key BLIND_SIG_KEY
+    setCurrentKey(BLIND_SIG_KEY);
     setGlobalModalOpen(true);
   };
 
-  // Open Global Rules Modal for Validation (per role)
-  const openGlobalRulesForValidation = (roleName: string) => {
-    setCurrentKey(roleName);
+  // Open Global Rules Modal for Validation using structured role key
+  const openGlobalRulesForValidation = (roleKey: string) => {
+    setCurrentKey(roleKey);
     setGlobalModalOpen(true);
   };
 
@@ -238,10 +257,10 @@ export default function AdminDashboard() {
               </button>
             </div>
             {globalSettingsType === "authorization" ? (
-              <CollapsibleSection title="blindsig:1" defaultExpanded={true}>
-                {globalSettings.authorizationSettings["blindsig:1"] &&
-                globalSettings.authorizationSettings["blindsig:1"].length > 0 ? (
-                  globalSettings.authorizationSettings["blindsig:1"].map((rule, idx) => (
+              <CollapsibleSection title={BLIND_SIG_KEY} defaultExpanded={true}>
+                {globalSettings.authorizationSettings[BLIND_SIG_KEY] &&
+                globalSettings.authorizationSettings[BLIND_SIG_KEY].rules.length > 0 ? (
+                  globalSettings.authorizationSettings[BLIND_SIG_KEY].rules.map((rule, idx) => (
                     <div key={idx} className="ml-4 mt-1 text-sm text-gray-600">
                       <div>
                         <span className="font-semibold">Field:</span> {rule.field}
@@ -253,10 +272,6 @@ export default function AdminDashboard() {
                       <div>
                         <span className="font-semibold">Values:</span>{" "}
                         {(rule.conditions[0]?.values || []).join(", ")}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Output Threshold:</span>{" "}
-                        {rule.output?.threshold !== undefined ? rule.output.threshold : "Not set"}
                       </div>
                     </div>
                   ))
@@ -273,21 +288,28 @@ export default function AdminDashboard() {
                 </button>
               </CollapsibleSection>
             ) : (
-              // Validation settings: iterate over roles
+              // Validation settings: iterate over roles using structured keys
               <>
                 {roles.length > 0 ? (
                   <div className="mb-4">
                     {roles.map((role) => {
-                      const rules =
-                        globalSettings.validationSettings[role.name] || [];
+                      // Generate a structured key based on role type:
+                      // For client roles, use: resource_access.{clientId}.roles.{role.name}
+                      // For realm roles, use: realm_access.roles.{role.name}
+                      const roleKey =
+                        role.clientRole && role.clientId
+                          ? `resource_access.${role.clientId}.roles.${role.name}`
+                          : `realm_access.roles.${role.name}`;
+                      const ruleSet: RuleSet =
+                        globalSettings.validationSettings[roleKey] || { rules: [] };
                       return (
                         <CollapsibleSection
                           key={role.id}
-                          title={role.name}
+                          title={roleKey}
                           defaultExpanded={false}
                         >
-                          {rules.length > 0 ? (
-                            rules.map((rule, idx) => (
+                          {ruleSet.rules.length > 0 ? (
+                            ruleSet.rules.map((rule, idx) => (
                               <div key={idx} className="ml-4 mt-1 text-sm text-gray-600">
                                 <div>
                                   <span className="font-semibold">Field:</span> {rule.field}
@@ -308,7 +330,7 @@ export default function AdminDashboard() {
                             </p>
                           )}
                           <button
-                            onClick={() => openGlobalRulesForValidation(role.name)}
+                            onClick={() => openGlobalRulesForValidation(roleKey)}
                             className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded transition text-sm"
                           >
                             Edit Rules
@@ -438,29 +460,30 @@ export default function AdminDashboard() {
       {globalModalOpen && currentKey && (
         <GlobalSettingsModalForRole
           roleKey={currentKey}
+          // Pass a RuleSet – defaulting to an empty RuleSet if none exists
           settings={
             globalSettingsType === "authorization"
-              ? globalSettings.authorizationSettings[currentKey] || []
-              : globalSettings.validationSettings[currentKey] || []
+              ? globalSettings.authorizationSettings[currentKey] || { rules: [] }
+              : globalSettings.validationSettings[currentKey] || { rules: [] }
           }
           onClose={() => {
             setGlobalModalOpen(false);
             setCurrentKey(null);
           }}
-          onSave={(updatedRules) =>
+          onSave={(updatedRuleSet) =>
             saveGlobalSettings({
               authorizationSettings:
                 globalSettingsType === "authorization"
                   ? {
                       ...globalSettings.authorizationSettings,
-                      [currentKey]: updatedRules,
+                      [currentKey]: updatedRuleSet,
                     }
                   : globalSettings.authorizationSettings,
               validationSettings:
                 globalSettingsType === "validation"
                   ? {
                       ...globalSettings.validationSettings,
-                      [currentKey]: updatedRules,
+                      [currentKey]: updatedRuleSet,
                     }
                   : globalSettings.validationSettings,
             })
@@ -520,7 +543,6 @@ const SidebarButton = ({
 );
 
 // --- Role Editor Modal ---
-// Simplified: just a checkbox "Is Authorizer Role?" is shown.
 const RoleModal = ({
   role,
   onClose,
@@ -600,9 +622,9 @@ const RoleModal = ({
 // --- Global Settings Modal for Role ---
 interface GlobalSettingsModalForRoleProps {
   roleKey: string;
-  settings: RuleDefinition[];
+  settings: RuleSet;
   onClose: () => void;
-  onSave: (rules: RuleDefinition[]) => void;
+  onSave: (ruleSet: RuleSet) => void;
   isAuthorization?: boolean;
 }
 
@@ -613,83 +635,69 @@ const GlobalSettingsModalForRole = ({
   onSave,
   isAuthorization = false,
 }: GlobalSettingsModalForRoleProps) => {
-  const [localRules, setLocalRules] = useState<RuleDefinition[]>(settings);
+  // Use a RuleSet as local state (holds both rules and optional output)
+  const [localRuleSet, setLocalRuleSet] = useState<RuleSet>(settings);
 
   const updateRuleField = (index: number, fieldValue: string) => {
-    const newRules = [...localRules];
+    const newRules = [...localRuleSet.rules];
     newRules[index] = { ...newRules[index], field: fieldValue };
-    setLocalRules(newRules);
+    setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
 
-  const updateRuleMethod = (index: number, methodValue: string) => {
-    const newRules = [...localRules];
-    const currentRule = newRules[index];
-    // Initialize conditions if empty
-    if (!currentRule.conditions || currentRule.conditions.length === 0) {
-      currentRule.conditions = [
-        { method: methodValue, values: methodValue === "BETWEEN" ? ["", ""] : [""] },
-      ];
-    } else {
-      if (methodValue === "BETWEEN") {
-        currentRule.conditions[0] = {
-          ...currentRule.conditions[0],
-          method: methodValue,
-          values:
-            currentRule.conditions[0].values.length === 2
-              ? currentRule.conditions[0].values
-              : ["", ""],
-        };
-      } else {
-        currentRule.conditions[0] = {
-          ...currentRule.conditions[0],
-          method: methodValue,
-          values:
-            currentRule.conditions[0].values.length === 1
-              ? currentRule.conditions[0].values
-              : [""],
-        };
-      }
-    }
-    newRules[index] = { ...currentRule };
-    setLocalRules(newRules);
+  const updateConditionField = (
+    ruleIndex: number,
+    condIndex: number,
+    field: keyof RuleCondition,
+    value: any
+  ) => {
+    const newRules = [...localRuleSet.rules];
+    const rule = newRules[ruleIndex];
+    const updatedConditions = [...rule.conditions];
+    updatedConditions[condIndex] = { ...updatedConditions[condIndex], [field]: value };
+    newRules[ruleIndex] = { ...rule, conditions: updatedConditions };
+    setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
 
-  const updateRuleValue = (index: number, valueIndex: number, newValue: string) => {
-    const newRules = [...localRules];
-    const rule = newRules[index];
-    if (!rule.conditions || rule.conditions.length === 0) {
-      rule.conditions = [{ method: methods[0], values: [""] }];
-    }
-    const condition = rule.conditions[0];
-    const newValues = [...condition.values];
-    newValues[valueIndex] = newValue;
-    rule.conditions[0] = { ...condition, values: newValues };
-    newRules[index] = { ...rule };
-    setLocalRules(newRules);
+  const addConditionToRule = (ruleIndex: number) => {
+    const newRules = [...localRuleSet.rules];
+    newRules[ruleIndex] = {
+      ...newRules[ruleIndex],
+      conditions: [...newRules[ruleIndex].conditions, { method: methods[0], values: [""] }],
+    };
+    setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
 
-  const updateRuleOutput = (index: number, newThreshold: number) => {
-    const newRules = [...localRules];
-    const rule = newRules[index];
-    rule.output = { threshold: newThreshold };
-    newRules[index] = { ...rule };
-    setLocalRules(newRules);
-  };
-
-  const removeRule = (index: number) => {
-    const newRules = localRules.filter((_, i) => i !== index);
-    setLocalRules(newRules);
+  const removeConditionFromRule = (ruleIndex: number, condIndex: number) => {
+    const newRules = [...localRuleSet.rules];
+    const updatedConditions = [...newRules[ruleIndex].conditions];
+    updatedConditions.splice(condIndex, 1);
+    newRules[ruleIndex] = { ...newRules[ruleIndex], conditions: updatedConditions };
+    setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
 
   const addRule = () => {
-    setLocalRules([
-      ...localRules,
-      { field: fields[0], conditions: [{ method: methods[0], values: [""] }] },
-    ]);
+    const newRule: RuleDefinition = {
+      ruleId: undefined,
+      field: fields[0],
+      conditions: [{ method: methods[0], values: [""] }],
+      aud: isAuthorization ? "model" : "user",
+    };
+    setLocalRuleSet({ ...localRuleSet, rules: [...localRuleSet.rules, newRule] });
+  };
+
+  const removeRule = (index: number) => {
+    const newRules = localRuleSet.rules.filter((_, i) => i !== index);
+    setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
 
   const handleSave = () => {
-    onSave(localRules);
+    // For authorization settings, ensure ruleSetId is set to "threshold_rule"
+    const updatedRuleSet = isAuthorization
+      ? { ...localRuleSet, ruleSetId: "threshold_rule" }
+      : localRuleSet;
+
+      const { ruleSetId, ...rest } = updatedRuleSet;
+    onSave({ ruleSetId, ...rest});
   };
 
   return (
@@ -698,8 +706,27 @@ const GlobalSettingsModalForRole = ({
         <h3 className="text-2xl font-semibold mb-6 text-gray-800">
           Edit Global Rules for <span className="font-bold">{roleKey}</span>
         </h3>
+        {/* For authorization settings, display a global threshold input */}
+        {isAuthorization && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">
+              Output Threshold
+            </label>
+            <input
+              type="number"
+              value={localRuleSet.outputs?.threshold || ""}
+              onChange={(e) =>
+                setLocalRuleSet({
+                  ...localRuleSet,
+                  outputs: { threshold: Number(e.target.value) },
+                })
+              }
+              className="w-full border border-gray-300 p-2 rounded"
+            />
+          </div>
+        )}
         <div className="mb-6">
-          {localRules.map((rule, index) => (
+          {localRuleSet.rules.map((rule, index) => (
             <div key={index} className="mb-4 p-4 border rounded bg-gray-50">
               <div className="flex flex-col md:flex-row gap-4 mb-3">
                 <div className="flex-1">
@@ -707,7 +734,7 @@ const GlobalSettingsModalForRole = ({
                   <select
                     value={rule.field}
                     onChange={(e) => updateRuleField(index, e.target.value)}
-                    className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 p-2 rounded"
                   >
                     {fields.map((f) => (
                       <option key={f} value={f}>
@@ -716,72 +743,74 @@ const GlobalSettingsModalForRole = ({
                     ))}
                   </select>
                 </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Method</label>
-                  <select
-                    value={rule.conditions[0]?.method}
-                    onChange={(e) => updateRuleMethod(index, e.target.value)}
-                    className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {methods.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
-              <div className="mb-3">
-                {rule.conditions[0]?.method === "BETWEEN" ? (
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium mb-1">Value 1</label>
+              {rule.conditions.map((condition, condIndex) => (
+                <div key={condIndex} className="border p-2 mb-2 rounded">
+                  <div className="flex gap-2">
+                    <select
+                      value={condition.method}
+                      onChange={(e) =>
+                        updateConditionField(index, condIndex, "method", e.target.value)
+                      }
+                      className="border p-2 rounded w-1/3"
+                    >
+                      {methods.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    {condition.method === "BETWEEN" ? (
+                      <>
+                        <input
+                          className="border p-2 rounded w-1/4"
+                          value={condition.values[0]}
+                          onChange={(e) =>
+                            updateConditionField(index, condIndex, "values", [
+                              e.target.value,
+                              condition.values[1],
+                            ])
+                          }
+                        />
+                        <input
+                          className="border p-2 rounded w-1/4"
+                          value={condition.values[1]}
+                          onChange={(e) =>
+                            updateConditionField(index, condIndex, "values", [
+                              condition.values[0],
+                              e.target.value,
+                            ])
+                          }
+                        />
+                      </>
+                    ) : (
                       <input
-                        type="text"
-                        value={rule.conditions[0].values[0] || ""}
-                        onChange={(e) => updateRuleValue(index, 0, e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="border p-2 rounded w-1/2"
+                        value={condition.values[0]}
+                        onChange={(e) =>
+                          updateConditionField(index, condIndex, "values", [e.target.value])
+                        }
                       />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium mb-1">Value 2</label>
-                      <input
-                        type="text"
-                        value={rule.conditions[0].values[1] || ""}
-                        onChange={(e) => updateRuleValue(index, 1, e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                    )}
+                    <button
+                      onClick={() => removeConditionFromRule(index, condIndex)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      Remove
+                    </button>
                   </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Value</label>
-                    <input
-                      type="text"
-                      value={rule.conditions[0]?.values[0] || ""}
-                      onChange={(e) => updateRuleValue(index, 0, e.target.value)}
-                      className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                )}
-              </div>
-              {isAuthorization && (
-                <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1">
-                    Output Threshold
-                  </label>
-                  <input
-                    type="number"
-                    value={rule.output?.threshold !== undefined ? rule.output.threshold : ""}
-                    onChange={(e) => updateRuleOutput(index, Number(e.target.value))}
-                    className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
                 </div>
-              )}
-              <div className="flex justify-end">
+              ))}
+              <button
+                onClick={() => addConditionToRule(index)}
+                className="text-sm px-2 py-1 bg-green-600 text-white rounded"
+              >
+                Add Condition
+              </button>
+              <div className="flex justify-end mt-2">
                 <button
                   onClick={() => removeRule(index)}
-                  className="text-red-500 hover:text-red-600 transition text-sm"
+                  className="text-red-500 hover:text-red-600"
                 >
                   Delete Rule
                 </button>
@@ -790,22 +819,21 @@ const GlobalSettingsModalForRole = ({
           ))}
           <button
             onClick={addRule}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded transition"
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded"
           >
-            <FaPlus className="inline mr-1" />
             Add Rule
           </button>
         </div>
         <div className="flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-100 transition"
+            className="px-4 py-2 border rounded hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
           >
             Save Global Rules
           </button>
