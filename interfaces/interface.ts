@@ -1,6 +1,7 @@
 // --- Interfaces ---
 export interface DraftSignRequest {
     id: string,
+    txBody: string,
     draft: string,
     draftJson: string,
     creationTimestamp: string

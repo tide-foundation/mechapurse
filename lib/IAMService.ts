@@ -188,7 +188,7 @@ export const createTxDraft = (txBody: string) => {
     return tidecloak.createCardanoTxDraft(txBody);
 }
 
-export const signTxDraft = async (txBody: string, authorizers: string, ruleSettings: string, expiry: string) => {
+export const signTxDraft = async (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
     console.log(txBody)
     const tidecloak = getKeycloakClient();
     if (!tidecloak) { return null; }

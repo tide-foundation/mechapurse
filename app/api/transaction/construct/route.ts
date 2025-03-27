@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
 
         const approvalUri = await createApprovalURI(token);
 
-        return NextResponse.json({ data: txBase64, uri: approvalUri.customDomainUri, txBody: txBody.to_json() });
+        return NextResponse.json({ data: txBase64, uri: approvalUri.customDomainUri, draftJson: txBody.to_json() });
 
     } catch (err) {
         console.error("Internal Server Error:", err);

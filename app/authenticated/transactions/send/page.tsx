@@ -35,13 +35,13 @@ export default function Send() {
     return { authorization: data.authorization, ruleSettings: data.ruleSettings };
   }
 
-  const addDraftRequest = async (data: string, dataJson: string): Promise<DraftSignRequest> => {
+  const addDraftRequest = async (txBody: string, data: string, dataJson: string): Promise<DraftSignRequest> => {
     const response = await fetch("/api/transaction/db/AddDraftRequest", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ data, dataJson }),
+      body: JSON.stringify({ txBody, data, dataJson }),
     });
 
     const resp = await response.json();
@@ -112,7 +112,7 @@ export default function Send() {
       const heimdall = new Heimdall(data.uri, [vuid])
       const draft = createTxDraft(data.data)
 
-      const draftReq = await addDraftRequest(draft, data.txBody);
+      const draftReq = await addDraftRequest(txbody, draft, data.draftJson);
       console.log(draftReq)
 
 
@@ -134,7 +134,7 @@ export default function Send() {
         // TODO: have a javascript rule to see if user can commit now.
         console.log(data.ruleSettings);
 
-        const sig = await signTxDraft(txbody, data.authorization, data.ruleSettings, expiry);
+        const sig = await signTxDraft(txbody, [data.authorization], data.ruleSettings, expiry);
         
         const response = await fetch("/api/transaction/send", {
           method: "POST",

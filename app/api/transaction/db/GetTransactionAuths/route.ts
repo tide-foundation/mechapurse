@@ -9,14 +9,10 @@ import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { createApprovalURI, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
 import { routeRoleMapping } from "@/lib/authConfig";
-import { AddDraftSignRequest } from "@/lib/db";
+import { AddAdminAuthorization, AddDraftSignRequest, GetAllDraftSignRequests, GetDraftSignRequest, GetDraftSignRequestAuthorizations } from "@/lib/db";
+import { AdminAuthorizationPack } from "@/interfaces/interface";
 
 const allowedRoles = [Roles.User, Roles.Admin];
-const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
-
-
-
-
 
 export async function POST(req: NextRequest) {
     try {
@@ -28,8 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
 
-        const { txBody, data, dataJson } = body;
-
+        const { id } = body;
         // Verify authorization token
         const cookieStore = cookies();
         const token = (await cookieStore).get("kcToken")?.value;
@@ -37,15 +32,15 @@ export async function POST(req: NextRequest) {
         if (!token) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        const draftReq = await AddDraftSignRequest(txBody, data, dataJson);
-  
-        return NextResponse.json({ draftReq: draftReq });
+        const authPacks: AdminAuthorizationPack[] = await GetDraftSignRequestAuthorizations(id);
+
+        return NextResponse.json({ authPacks }); // send the drafts in response
     } catch (err) {
         console.error("Internal Server Error:", err);
         return NextResponse.json({ error: "Internal Server Error: " + err }, { status: 500 });
     }
-
 }

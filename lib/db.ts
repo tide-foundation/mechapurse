@@ -18,6 +18,7 @@ async function initializeDatabase() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS cardanoTxRequests (
       id TEXT PRIMARY KEY,
+      txBody TEXT,
       draft TEXT,
       draftJson TEXT,
       creationTimestamp TEXT DEFAULT (datetime('now'))
@@ -63,13 +64,14 @@ export async function GetDraftSignRequestAuthorizations(requestId: string): Prom
     return rows; // array of { adminAuthorization: "..." }
 }
 
-export async function AddDraftSignRequest(draft: string, draftJson: string): Promise<DraftSignRequest> {
+export async function AddDraftSignRequest(txBody:string, draft: string, draftJson: string): Promise<DraftSignRequest> {
     const db = await dbPromise;
     const id = crypto.randomUUID(); // e.g. '4f3d5e12-1234-4fef-bb6e-b8f94d9e9c3f'
     const now = new Date().toISOString();
     await db.run(
-      'INSERT INTO cardanoTxRequests (id, draft, draftJson, creationTimestamp) VALUES (?, ?, ?, ?)',
+      'INSERT INTO cardanoTxRequests (id, txBody, draft, draftJson, creationTimestamp) VALUES (?, ?, ?, ?, ?)',
       id,
+      txBody,
       draft,
       draftJson,
       now

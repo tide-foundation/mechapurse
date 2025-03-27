@@ -5,10 +5,13 @@ import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
 import { FaArrowRight, FaArrowLeft, FaWallet, FaCopy, FaCheckCircle, FaClock } from "react-icons/fa";
 import { Transaction } from "@/types/Transactions";
-import { CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
+import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
+import { Heimdall } from "@/tide-modules/modules/heimdall";
+import { createAuthorization } from "@/lib/tidecloakApi";
+import { signTxDraft } from "@/lib/IAMService";
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, vuid } = useAuth();
   const router = useRouter();
   const [walletAddress, setWalletAddress] = useState("");
   const [walletBalance, setWalletBalance] = useState("No balance data found");
@@ -28,6 +31,125 @@ export default function Dashboard() {
 
   // For this example, we assume that transactions with a "Pending" status require approval.
   const approvalTransactions = transactions.filter((tx) => tx.status === "Pending");
+
+//TO DO ADD IN ONE SPOT!!
+const createAuthorization = async (authorizerApproval: string, authorizerAuthentication: string) => {
+    const response = await fetch("/api/transaction/sign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ authorizerApproval, authorizerAuthentication }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to create authorization");
+
+    return { authorization: data.authorization, ruleSettings: data.ruleSettings };
+  }
+
+  const addDraftRequest = async (data: string, dataJson: string): Promise<DraftSignRequest> => {
+    const response = await fetch("/api/transaction/db/AddDraftRequest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data, dataJson }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp.draftReq;
+  }
+
+  const addAdminAuth = async (id: string, vuid: string, authorization: string): Promise<DraftSignRequest> => {
+    const response = await fetch("/api/transaction/db/AddAdminAuth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, vuid, authorization }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp;
+  }
+
+  const deleteDraftRequest = async (id: string): Promise<string> => {
+    const response = await fetch("/api/transaction/db/DeleteDraftRequest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp;
+  }
+
+  const getTxAuthorization = async (id: string): Promise<AdminAuthorizationPack[]> => {
+    const response = await fetch("/api/transaction/db/GetTransactionAuths", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    console.log(resp)
+    return resp.authPacks;
+  }
+
+
+
+  const handleReview = async (draft: DraftSignRequest) => {
+    const resp = await fetch("/api/utils", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+    });
+    if (!resp.ok) throw new Error("Failed to fetch uri");
+    const data = await resp.json();
+    const date = new Date(draft.creationTimestamp);
+    const expiry = (Math.floor(date.getTime() / 1000) + 7 * 24 * 60 * 60).toString(); // 1 week later
+    const heimdall = new Heimdall(data.uri, [vuid])
+    await heimdall.openEnclave();
+    const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64")
+    if (authApproval.accepted === true) {
+        const authzAuthn = await heimdall.getAuthorizerAuthentication();
+        heimdall.closeEnclave();
+
+        const data = await createAuthorization(authApproval.data, authzAuthn);
+        await addAdminAuth(draft.id, vuid, data.authorization)
+
+        // TODO: have a javascript rule to see if user can commit now.
+        console.log(data.ruleSettings);
+
+        const blah: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
+        console.log(blah)
+        const blah2 = blah.map(b => b.adminAuthorization)
+
+        const sig = await signTxDraft(draft.txBody, blah2, data.ruleSettings, expiry);
+        
+        const response = await fetch("/api/transaction/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ txBody: draft.txBody, sigBase64: sig }),
+        });
+
+        const sentResp = await response.json();
+        if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
+        await deleteDraftRequest(draft.id);
+        console.log(sig)
+      }
+
+  } 
 
   const prettyJson = (jsonString: string) => {
     const txBody: CardanoTxBody = JSON.parse(jsonString);
@@ -288,7 +410,7 @@ export default function Dashboard() {
                         prettyJson(tx.draftJson)
                     }
                 </pre>
-                <button className="mt-auto mx-auto px-4 py-2 bg-[#2979FF] hover:bg-[#1E6AE1] 
+                <button onClick={(async () => await handleReview(tx))} className="mt-auto mx-auto px-4 py-2 bg-[#2979FF] hover:bg-[#1E6AE1] 
                                     text-white font-bold rounded-xl">
                     Review
                 </button>

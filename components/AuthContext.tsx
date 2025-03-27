@@ -9,7 +9,7 @@ interface AuthContextType {
     hasRole: (role: string, clientId?: string) => boolean;
     vuid: string;
     createTxDraft: (txBody: string) => string;
-    signTxDraft: (txBody: string, authorizers: string, ruleSettings: string, expiry: string) => Promise<string>;
+    signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
 
 }
 
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
 
-    const signTxDraft = (txBody: string, authorizers: string, ruleSettings: string, expiry: string) => {
+    const signTxDraft = (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
         return IAMService.signTxDraft(txBody, authorizers, ruleSettings, expiry);
     }
 
