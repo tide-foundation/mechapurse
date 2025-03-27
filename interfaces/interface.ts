@@ -1,4 +1,18 @@
 // --- Interfaces ---
+export interface DraftSignRequest {
+    id: string,
+    draft: string,
+    draftJson: string,
+    creationTimestamp: string
+}
+
+export interface AdminAuthorizationPack {
+    id: string,
+    userId: string,
+    cardanoTxRequestId: string,
+    adminAuthorization: string
+}
+
 export interface User {
     id: string;
     name: string;
@@ -51,5 +65,23 @@ export interface RealmKeyRules {
     rulesCert: string;
 }
 
+
+export interface CardanoTxBody {
+    Inputs: CardanoTxBodyInputs[],
+    Outputs: CardanoTxBodyOutputs[],
+    Fee: string,
+    TTL: string,
+
+}
+
+export interface CardanoTxBodyInputs {
+    TxHash: string,
+    TxIndex: string,
+}
+
+export interface CardanoTxBodyOutputs{
+    Address: string,
+    Amount: string
+}
 
 

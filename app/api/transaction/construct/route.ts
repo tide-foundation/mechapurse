@@ -196,38 +196,9 @@ export async function POST(req: NextRequest) {
         console.log(txBody.to_json())
         const txBase64 = bytesToBase64(txBody.to_bytes());
 
-        // const test = await signTx(txBase64, "3b51f0fe-6feb-4129-af4c-6271a037a2f0", token);
-
-        // const txHash = FixedTransaction.new_from_body_bytes(txBody.to_bytes());
-        // // add keyhash witnesses
-        // const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-        // const vKey = Vkey.new(publicKey);
-        // console.log(test);
-
-        // const sig = Ed25519Signature.from_bytes(base64ToBytes(test));
-        // const vkeyWitness = CardanoWasm.Vkeywitness.new(vKey, sig);
-        // vkeyWitnesses.add(vkeyWitness);
-
-        // const witnesses = CardanoWasm.TransactionWitnessSet.new();
-        // witnesses.set_vkeys(vkeyWitnesses);
-
-        // // create the finalized transaction with witnesses
-        // const transaction = CardanoWasm.Transaction.new(
-        //     txBody,
-        //     witnesses,
-        //     undefined, // transaction metadata
-        // );
-
-        // console.log({ transaction: txBody.to_hex(), hash: txHash.transaction_hash().to_hex() })
-
         const approvalUri = await createApprovalURI(token);
 
-
-        // const result = await submitSignedTransaction(transaction.to_bytes());
-
-
-        // return NextResponse.json({ txHash: result });
-        return NextResponse.json({ data: txBase64, uri: approvalUri.customDomainUri });
+        return NextResponse.json({ data: txBase64, uri: approvalUri.customDomainUri, txBody: txBody.to_json() });
 
     } catch (err) {
         console.error("Internal Server Error:", err);

@@ -6,6 +6,8 @@ import { ImSpinner8 } from "react-icons/im";
 import { Heimdall } from "../../../../tide-modules/modules/heimdall.js";
 import { useAuth } from "@/components/AuthContext";
 import { createApprovalURI } from "@/lib/tidecloakApi.js";
+import { AddAdminAuthorization, AddDraftSignRequest, DeleteDraftSignRequest } from "@/lib/db";
+import { DraftSignRequest } from "@/interfaces/interface.js";
 
 
 
@@ -31,6 +33,48 @@ export default function Send() {
     if (!response.ok) throw new Error(data.error || "Unable to create authorization");
 
     return { authorization: data.authorization, ruleSettings: data.ruleSettings };
+  }
+
+  const addDraftRequest = async (data: string, dataJson: string): Promise<DraftSignRequest> => {
+    const response = await fetch("/api/transaction/db/AddDraftRequest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data, dataJson }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp.draftReq;
+  }
+
+  const addAdminAuth = async (id: string, vuid: string, authorization: string): Promise<DraftSignRequest> => {
+    const response = await fetch("/api/transaction/db/AddAdminAuth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, vuid, authorization }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp;
+  }
+
+  const deleteDraftRequest = async (id: string): Promise<string> => {
+    const response = await fetch("/api/transaction/db/DeleteDraftRequest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id }),
+    });
+
+    const resp = await response.json();
+    if (!response.ok) throw new Error(resp.error || "Unable to create authorization");
+    return resp;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,21 +110,31 @@ export default function Send() {
       if (!response.ok) throw new Error(data.error || "Transaction failed");
 
       const heimdall = new Heimdall(data.uri, [vuid])
-      const test = createTxDraft(data.data)
-      const staticDate = new Date('2025-03-21T13:00:00Z'); // 1:00pm UTC on 21 March 2025
-      const expiry = (Math.floor(staticDate.getTime() / 1000) + 7 * 24 * 60 * 60).toString(); // 1 week later
+      const draft = createTxDraft(data.data)
 
-      // const expiry = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60).toString(); // one week from now TODO: should be one week from this request!
+      const draftReq = await addDraftRequest(draft, data.txBody);
+      console.log(draftReq)
+
+
+      const date = new Date(draftReq.creationTimestamp);
+      const expiry = (Math.floor(date.getTime() / 1000) + 7 * 24 * 60 * 60).toString(); // 1 week later
 
       await heimdall.openEnclave();
-      const authApproval = await heimdall.getAuthorizerApproval(test, "CardanoTx:1", expiry, "base64")
+      const authApproval = await heimdall.getAuthorizerApproval(draft, "CardanoTx:1", expiry, "base64")
       console.log(authApproval)
 
 
       if (authApproval.accepted === true) {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
+        heimdall.closeEnclave();
+
         const data = await createAuthorization(authApproval.data, authzAuthn);
-        const sig = await signTxDraft(txbody, data.authorization, data.ruleSettings);
+        await addAdminAuth(draftReq.id, vuid, data.authorization)
+
+        // TODO: have a javascript rule to see if user can commit now.
+        console.log(data.ruleSettings);
+
+        const sig = await signTxDraft(txbody, data.authorization, data.ruleSettings, expiry);
         
         const response = await fetch("/api/transaction/send", {
           method: "POST",
@@ -94,13 +148,10 @@ export default function Send() {
         if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
         setTransactionResult(`TX Hash: ${sentResp.txHash}`);
         setSuccessMessage("Transaction successfully submitted!");
+        await deleteDraftRequest(draftReq.id);
         console.log(sig)
       }
 
-      await heimdall.closeEnclave();
-
-      // setTransactionResult(`TX Hash: ${data.txHash}`);
-      // setSuccessMessage("Transaction successfully submitted!");
     } catch (err: any) {
       setError(`⚠️ ${err.message}`);
     } finally {
