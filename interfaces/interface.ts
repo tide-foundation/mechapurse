@@ -1,4 +1,6 @@
 // --- Interfaces ---
+
+
 export interface DraftSignRequest {
     id: string,
     txBody: string,
@@ -61,6 +63,11 @@ export interface RuleCondition {
     values: string[];
 }
 
+export interface RuleConfiguration {
+    id: string,
+    ruleConfig: RealmKeyRules,
+}
+
 export interface RealmKeyRules {
     rules: RulesContainer;
     rulesCert: string;
@@ -80,7 +87,7 @@ export interface CardanoTxBodyInputs {
     TxIndex: string,
 }
 
-export interface CardanoTxBodyOutputs{
+export interface CardanoTxBodyOutputs {
     Address: string,
     Amount: string
 }

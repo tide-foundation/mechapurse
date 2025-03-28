@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { Roles } from "@/app/constants/roles";
 import { RoleRepresentation } from "@/lib/keycloakTypes";
 import { RuleDefinition, RulesContainer } from "@/interfaces/interface";
+import { AddRuleConfiguration } from "@/lib/db";
 
 const allowedRole = [Roles.Admin];
 
@@ -54,6 +55,9 @@ export async function POST(req: NextRequest) {
         console.log(settings)
         // Save and sign the rules (rules should be an array of RuleDefinition objects)
         await saveAndSignRules(settings, token);
+
+        const realmKeysConfig = await getRealmKeyRules(token);
+        await AddRuleConfiguration(JSON.stringify(realmKeysConfig.rules), realmKeysConfig.rulesCert);
 
         return NextResponse.json({ roles: "updated" });
     } catch (error) {

@@ -9,7 +9,8 @@ import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { createApprovalURI, createAuthorization, getRealmKeyRules, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
 import { routeRoleMapping } from "@/lib/authConfig";
-import { RealmKeyRules } from "@/interfaces/interface";
+import { RealmKeyRules, RuleConfiguration } from "@/interfaces/interface";
+import { GetRuleConfiguration } from "@/lib/db";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 
@@ -35,8 +36,11 @@ export async function POST(req: NextRequest) {
         if (!user) throw new Error("Invalid token");
 
         const auth = await createAuthorization(getResource(), authorizerApproval, authorizerAuthentication, token);
-        const rules: RealmKeyRules = (await getRealmKeyRules(token));
-        return NextResponse.json({ authorization: auth, ruleSettings: { ...rules } });
+        const rules: RuleConfiguration | null = await GetRuleConfiguration();
+        if (rules == null) {
+            return NextResponse.json({ error: "No rules found" }, { status: 404 });
+        }
+        return NextResponse.json({ authorization: auth, ruleSettings: { ...rules.ruleConfig } });
 
     } catch (err) {
         console.error("Internal Server Error:", err);

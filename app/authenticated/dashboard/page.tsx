@@ -7,7 +7,6 @@ import { FaArrowRight, FaArrowLeft, FaWallet, FaCopy, FaCheckCircle, FaClock } f
 import { Transaction } from "@/types/Transactions";
 import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
-import { createAuthorization } from "@/lib/tidecloakApi";
 import { signTxDraft } from "@/lib/IAMService";
 
 export default function Dashboard() {
@@ -32,8 +31,8 @@ export default function Dashboard() {
   // For this example, we assume that transactions with a "Pending" status require approval.
   const approvalTransactions = transactions.filter((tx) => tx.status === "Pending");
 
-//TO DO ADD IN ONE SPOT!!
-const createAuthorization = async (authorizerApproval: string, authorizerAuthentication: string) => {
+  //TO DO ADD IN ONE SPOT!!
+  const createAuthorization = async (authorizerApproval: string, authorizerAuthentication: string) => {
     const response = await fetch("/api/transaction/sign", {
       method: "POST",
       headers: {
@@ -109,8 +108,8 @@ const createAuthorization = async (authorizerApproval: string, authorizerAuthent
 
   const handleReview = async (draft: DraftSignRequest) => {
     const resp = await fetch("/api/utils", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
     });
     if (!resp.ok) throw new Error("Failed to fetch uri");
     const data = await resp.json();
@@ -120,36 +119,36 @@ const createAuthorization = async (authorizerApproval: string, authorizerAuthent
     await heimdall.openEnclave();
     const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64")
     if (authApproval.accepted === true) {
-        const authzAuthn = await heimdall.getAuthorizerAuthentication();
-        heimdall.closeEnclave();
+      const authzAuthn = await heimdall.getAuthorizerAuthentication();
+      heimdall.closeEnclave();
 
-        const data = await createAuthorization(authApproval.data, authzAuthn);
-        await addAdminAuth(draft.id, vuid, data.authorization)
+      const data = await createAuthorization(authApproval.data, authzAuthn);
+      await addAdminAuth(draft.id, vuid, data.authorization)
 
-        // TODO: have a javascript rule to see if user can commit now.
-        console.log(data.ruleSettings);
+      // TODO: have a javascript rule to see if user can commit now.
+      console.log(data.ruleSettings);
 
-        const blah: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
-        console.log(blah)
-        const blah2 = blah.map(b => b.adminAuthorization)
+      const blah: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
+      console.log(blah)
+      const blah2 = blah.map(b => b.adminAuthorization)
 
-        const sig = await signTxDraft(draft.txBody, blah2, data.ruleSettings, expiry);
-        
-        const response = await fetch("/api/transaction/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ txBody: draft.txBody, sigBase64: sig }),
-        });
+      const sig = await signTxDraft(draft.txBody, blah2, data.ruleSettings, expiry);
 
-        const sentResp = await response.json();
-        if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
-        await deleteDraftRequest(draft.id);
-        console.log(sig)
-      }
+      const response = await fetch("/api/transaction/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ txBody: draft.txBody, sigBase64: sig }),
+      });
 
-  } 
+      const sentResp = await response.json();
+      if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
+      await deleteDraftRequest(draft.id);
+      console.log(sig)
+    }
+
+  }
 
   const prettyJson = (jsonString: string) => {
     const txBody: CardanoTxBody = JSON.parse(jsonString);
@@ -364,72 +363,72 @@ const createAuthorization = async (authorizerApproval: string, authorizerAuthent
         </div>
       </div>
 
-   {/* Transactions Pending Approval - Horizontal Scroll */}
-    <div className="mt-10 w-full max-w-7xl">
-    {/* Outer Card Container */}
-    <div className="bg-gradient-to-b from-[#1E3A8A] to-[#233A73] 
+      {/* Transactions Pending Approval - Horizontal Scroll */}
+      <div className="mt-10 w-full max-w-7xl">
+        {/* Outer Card Container */}
+        <div className="bg-gradient-to-b from-[#1E3A8A] to-[#233A73] 
                     rounded-xl p-6 shadow-lg border border-blue-700 
                     w-full relative overflow-hidden">
 
-        {/* Title */}
-        <h2 className="text-lg font-semibold text-white mb-3 text-center">
-        Transactions Pending Approval
-        </h2>
+          {/* Title */}
+          <h2 className="text-lg font-semibold text-white mb-3 text-center">
+            Transactions Pending Approval
+          </h2>
 
-        {/* Conditional Content */}
-        {pendingTransactions.length <= 0 ? (
-        // If no transactions need approval, show a single message
-        <div className="flex items-center justify-center h-32">
-            <p className="text-blue-300">No transactions require approval.</p>
-        </div>
-        ) : (
-        // If there are transactions, show the arrows + scrollable container
-        <>
-            {/* Left Scroll Button */}
-            <button
-            onClick={scrollLeft}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 
-                        z-10 bg-blue-700 p-2 rounded-full"
-            >
-            <FaArrowLeft className="text-white" />
-            </button>
-
-            {/* Scrollable Container */}
-            <div
-            ref={approvalScrollRef}
-            className="flex space-x-4 overflow-x-auto px-6 py-2 scrollbar-hide"
-            >
-            {pendingTransactions.map((tx) => (
-                <div
-                key={tx.id}
-                className="min-w-[300px] bg-blue-800/80 
-                            rounded-xl p-4 border border-blue-700 flex flex-col"
-                >
-                <pre className="text-xs text-white overflow-x-auto whitespace-pre-wrap">
-                    {
-                        prettyJson(tx.draftJson)
-                    }
-                </pre>
-                <button onClick={(async () => await handleReview(tx))} className="mt-auto mx-auto px-4 py-2 bg-[#2979FF] hover:bg-[#1E6AE1] 
-                                    text-white font-bold rounded-xl">
-                    Review
-                </button>
-                </div>
-            ))}
+          {/* Conditional Content */}
+          {pendingTransactions.length <= 0 ? (
+            // If no transactions need approval, show a single message
+            <div className="flex items-center justify-center h-32">
+              <p className="text-blue-300">No transactions require approval.</p>
             </div>
-
-            {/* Right Scroll Button */}
-            <button
-            onClick={scrollRight}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 
+          ) : (
+            // If there are transactions, show the arrows + scrollable container
+            <>
+              {/* Left Scroll Button */}
+              <button
+                onClick={scrollLeft}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 
                         z-10 bg-blue-700 p-2 rounded-full"
-            >
-            <FaArrowRight className="text-white" />
-            </button>
-        </>
-        )}
-    </div>
-    </div>
+              >
+                <FaArrowLeft className="text-white" />
+              </button>
+
+              {/* Scrollable Container */}
+              <div
+                ref={approvalScrollRef}
+                className="flex space-x-4 overflow-x-auto px-6 py-2 scrollbar-hide"
+              >
+                {pendingTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="min-w-[300px] bg-blue-800/80 
+                            rounded-xl p-4 border border-blue-700 flex flex-col"
+                  >
+                    <pre className="text-xs text-white overflow-x-auto whitespace-pre-wrap">
+                      {
+                        prettyJson(tx.draftJson)
+                      }
+                    </pre>
+                    <button onClick={(async () => await handleReview(tx))} className="mt-auto mx-auto px-4 py-2 bg-[#2979FF] hover:bg-[#1E6AE1] 
+                                    text-white font-bold rounded-xl">
+                      Review
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Scroll Button */}
+              <button
+                onClick={scrollRight}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 
+                        z-10 bg-blue-700 p-2 rounded-full"
+              >
+                <FaArrowRight className="text-white" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
     </main>
   );
