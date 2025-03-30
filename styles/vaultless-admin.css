@@ -1,0 +1,108 @@
+/* Vaultless Admin Dashboard */
+.vaultless-dashboard {
+    background-color: #0a0a0c;
+    color: #e0f7fa;
+    font-family: 'Inter', 'Orbitron', monospace;
+    min-height: 100vh;
+    display: flex;
+    width: 100%;
+    padding: 2rem;
+}
+
+/* Card Styling */
+.vaultless-dashboard .card {
+    background-color: #131417;
+    border: 1px solid rgba(77, 168, 218, 0.2);
+    box-shadow: 0 0 10px rgba(77, 168, 218, 0.3);
+    border-radius: 1rem;
+    padding: 2rem;
+    width: 100%;
+    color: #e0f7fa;
+    margin-bottom: 1rem;
+}
+
+/* Full width settings panel */
+.vaultless-dashboard .card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.vaultless-dashboard button {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.vaultless-dashboard button:hover {
+    filter: drop-shadow(0 0 5px #4da8da);
+    background-color: #1b2a41;
+}
+
+/* Sidebar Styling */
+.vaultless-dashboard .sidebar {
+    background-color: #111827;
+    border-right: 1px solid #1f2937;
+    padding: 1rem;
+    width: 250px;
+    /* Adjust sidebar width */
+}
+
+.vaultless-dashboard .sidebar button {
+    background: none;
+    color: #e0f7fa;
+    padding: 0.75rem;
+    width: 100%;
+    text-align: left;
+}
+
+.vaultless-dashboard .sidebar button.active,
+.vaultless-dashboard .sidebar button:hover {
+    background-color: #1f2937;
+    color: #4da8da;
+}
+
+/* Title */
+.vaultless-dashboard h1,
+.vaultless-dashboard h2,
+.vaultless-dashboard h3 {
+    color: #4da8da;
+    letter-spacing: 0.05em;
+}
+
+/* Settings Panel Full Width */
+.vaultless-dashboard .settings-panel {
+    width: calc(100% - 250px);
+    /* Full width of the content excluding sidebar */
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.vaultless-dashboard .settings-panel h3 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.vaultless-dashboard .settings-panel p {
+    color: #b0b0b0;
+}
+
+/* Global Settings Button Styling */
+.vaultless-dashboard .settings-panel button {
+    background-color: #00fff7;
+    color: #0a0a0c;
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.vaultless-dashboard .settings-panel button:hover {
+    background-color: #0086aa;
+    box-shadow: 0 0 10px #00fff7;
+}

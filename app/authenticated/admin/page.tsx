@@ -18,8 +18,9 @@ import {
   RuleDefinition,
   RuleCondition,
 } from "@/interfaces/interface";
+import styles from "@/styles/AdminDashboard.module.css";
 
-// --- Constants for rule creation (global rules) ---
+// --- Constants for Rule Creation ---
 const methods = [
   "LESS_THAN",
   "GREATER_THAN",
@@ -38,98 +39,87 @@ const fields = [
   "TTL",
 ];
 
-// Use the same BLIND_SIG_KEY for authorization settings
-const BLIND_SIG_KEY = "BlindSig:1";
+// Default key if none exists
+const DEFAULT_AUTH_KEY = "BlindSig:1";
 
 export default function AdminDashboard() {
-  // Three views: "settings", "users", "roles"
   const [view, setView] = useState("settings");
-
-  // Users and Roles
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-
-  // Modal state for Role CRUD
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
-
-  // Global Settings state (RulesContainer)
   const [globalSettings, setGlobalSettings] = useState<RulesContainer>({
-    authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } },
+    authorizationSettings: { [DEFAULT_AUTH_KEY]: { rules: [] } },
     validationSettings: {},
   });
   const [globalModalOpen, setGlobalModalOpen] = useState(false);
-  // For validation, currentKey is now a structured key (either realm or client)
   const [currentKey, setCurrentKey] = useState<string | null>(null);
-  // Toggle between editing authorization or validation settings
   const [globalSettingsType, setGlobalSettingsType] = useState<"authorization" | "validation">("authorization");
 
   const router = useRouter();
 
-  // Fetch data when view changes
   useEffect(() => {
     if (view === "users") fetchUsers();
     if (view === "roles") fetchRoles();
     if (view === "settings") {
-      fetchRoles(); // roles needed for validation settings
+      fetchRoles(); // For validation settings reference
       fetchGlobalSettings();
     }
   }, [view]);
 
-  // --- Fetch Users ---
+  // --- API Calls ---
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/admin/users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
 
-  // --- Fetch Roles ---
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/admin/roles");
-      if (!response.ok) throw new Error("Failed to fetch roles");
-      const data = await response.json();
+      const res = await fetch("/api/admin/roles");
+      if (!res.ok) throw new Error("Failed to fetch roles");
+      const data = await res.json();
       setRoles(data.roles);
     } catch (error) {
       console.error("Error fetching roles:", error);
     }
   };
 
-  // --- Fetch Global Settings ---
   const fetchGlobalSettings = async () => {
     try {
-      const response = await fetch("/api/admin/global-rules");
-      if (response.ok) {
-        const data = await response.json();
-        // data is expected to be a RulesContainer
+      const res = await fetch("/api/admin/global-rules");
+      if (res.ok) {
+        const data = await res.json();
         setGlobalSettings(
           data || {
-            authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } },
+            authorizationSettings: { [DEFAULT_AUTH_KEY]: { rules: [] } },
             validationSettings: {},
           }
         );
       } else {
-        setGlobalSettings({ authorizationSettings: { [BLIND_SIG_KEY]: { rules: [] } }, validationSettings: {} });
+        setGlobalSettings({
+          authorizationSettings: { [DEFAULT_AUTH_KEY]: { rules: [] } },
+          validationSettings: {},
+        });
       }
     } catch (error) {
       console.error("Error fetching global settings:", error);
     }
   };
 
-  // --- Save Global Settings ---
   const saveGlobalSettings = async (updatedSettings: RulesContainer) => {
     try {
-      const response = await fetch("/api/admin/global-rules", {
+      const res = await fetch("/api/admin/global-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedSettings),
       });
-      if (!response.ok) throw new Error("Failed to save global settings");
+      if (!res.ok) throw new Error("Failed to save global settings");
       setGlobalModalOpen(false);
       setCurrentKey(null);
       fetchGlobalSettings();
@@ -151,21 +141,21 @@ export default function AdminDashboard() {
 
   const saveRole = async (role: Partial<Role>) => {
     try {
-      let response;
+      let res;
       if (roleToEdit) {
-        response = await fetch(`/api/admin/roles/${roleToEdit.id}`, {
+        res = await fetch(`/api/admin/roles/${roleToEdit.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(role),
         });
       } else {
-        response = await fetch("/api/admin/roles", {
+        res = await fetch("/api/admin/roles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(role),
         });
       }
-      if (!response.ok) throw new Error("Failed to save role");
+      if (!res.ok) throw new Error("Failed to save role");
       setRoleModalOpen(false);
       fetchRoles();
     } catch (error) {
@@ -175,209 +165,181 @@ export default function AdminDashboard() {
 
   const deleteRole = async (roleId: string) => {
     try {
-      const response = await fetch(`/api/admin/roles/${roleId}`, {
+      const res = await fetch(`/api/admin/roles/${roleId}`, {
         method: "DELETE",
       });
-      if (!response.ok) throw new Error("Failed to delete role");
+      if (!res.ok) throw new Error("Failed to delete role");
       fetchRoles();
     } catch (error) {
       console.error("Error deleting role:", error);
     }
   };
 
-  // Open Global Rules Modal for Authorization
-  const openGlobalRulesForAuthorization = () => {
-    // Since authorizationSettings is fixed to key BLIND_SIG_KEY
-    setCurrentKey(BLIND_SIG_KEY);
+  // --- Global Rules Modal Openers ---
+  const openGlobalRulesForAuthorization = (key: string) => {
+    setCurrentKey(key);
+    setGlobalSettingsType("authorization");
     setGlobalModalOpen(true);
   };
 
-  // Open Global Rules Modal for Validation using structured role key
   const openGlobalRulesForValidation = (roleKey: string) => {
     setCurrentKey(roleKey);
+    setGlobalSettingsType("validation");
     setGlobalModalOpen(true);
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className={styles.adminLayout}>
       {/* Sidebar */}
-      <aside className="bg-blue-900 text-white w-64 h-[calc(100vh-4rem)] fixed top-16 left-0 p-6 space-y-6">
-        <h1 className="text-xl font-bold">Admin Panel</h1>
-        <nav className="mt-6 space-y-4">
-          <SidebarButton
-            active={view === "settings"}
-            onClick={() => setView("settings")}
-            icon={<FaCogs />}
-            text="Global Settings"
-          />
-          <SidebarButton
-            active={view === "users"}
-            onClick={() => setView("users")}
-            icon={<FaUsers />}
-            text="Manage Users"
-          />
-          <SidebarButton
-            active={view === "roles"}
-            onClick={() => setView("roles")}
-            icon={<FaUserShield />}
-            text="Manage Roles"
-          />
-        </nav>
+      <aside className={styles.adminSidebar}>
+        <h1 className={styles.sidebarTitle}>Admin Panel</h1>
+        <SidebarButton
+          active={view === "settings"}
+          onClick={() => setView("settings")}
+          icon={<FaCogs />}
+          text="Global Settings"
+        />
+        <SidebarButton
+          active={view === "users"}
+          onClick={() => setView("users")}
+          icon={<FaUsers />}
+          text="Manage Users"
+        />
+        <SidebarButton
+          active={view === "roles"}
+          onClick={() => setView("roles")}
+          icon={<FaUserShield />}
+          text="Manage Roles"
+        />
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 ml-64 p-6 bg-gray-100 h-[calc(100vh-4rem)] overflow-y-auto">
+      <main className={styles.adminContent}>
         {view === "settings" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-2xl font-semibold mb-4">Global Settings</h3>
-            <p className="text-gray-600 mb-4">
-              Configure the global rule definitions.
+          <div className={styles.adminCard}>
+            <h2 className={styles.cardTitle}>Global Settings</h2>
+            <p className={styles.cardSubtitle}>
+              Configure system-wide authorization and validation rules.
             </p>
-            {/* Toggle buttons for Authorization vs Validation */}
-            <div className="flex mb-4">
-              <button
-                onClick={() => setGlobalSettingsType("authorization")}
-                className={`px-4 py-2 mr-2 rounded ${
-                  globalSettingsType === "authorization"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-800"
-                }`}
-              >
-                Authorization Settings
-              </button>
-              <button
-                onClick={() => setGlobalSettingsType("validation")}
-                className={`px-4 py-2 rounded ${
-                  globalSettingsType === "validation"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-800"
-                }`}
-              >
-                Validation Settings
-              </button>
-            </div>
-            {globalSettingsType === "authorization" ? (
-              <CollapsibleSection title={BLIND_SIG_KEY} defaultExpanded={true}>
-                {globalSettings.authorizationSettings[BLIND_SIG_KEY] &&
-                globalSettings.authorizationSettings[BLIND_SIG_KEY].rules.length > 0 ? (
-                  globalSettings.authorizationSettings[BLIND_SIG_KEY].rules.map((rule, idx) => (
-                    <div key={idx} className="ml-4 mt-1 text-sm text-gray-600">
-                      <div>
-                        <span className="font-semibold">Field:</span> {rule.field}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Method:</span>{" "}
-                        {rule.conditions[0]?.method}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Values:</span>{" "}
-                        {(rule.conditions[0]?.values || []).join(", ")}
+            {/* Authorization Rules */}
+            <section className={styles.section}>
+              {globalSettings.authorizationSettings &&
+                Object.entries(globalSettings.authorizationSettings).map(([key, ruleSet]) => (
+                  <div key={key} className={styles.authorizationRuleset}>
+                    <div className={styles.sectionHeader}>
+                      <h3 className={styles.sectionTitle}>
+                        Authorization Rules ({key})
+                      </h3>
+                      <div className={styles.thresholdInfo}>
+                        <strong>Threshold:</strong>{" "}
+                        {ruleSet.outputs?.threshold || "Not set"}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="ml-4 text-sm text-gray-500">
-                    No rules set for authorization.
-                  </p>
-                )}
-                <button
-                  onClick={openGlobalRulesForAuthorization}
-                  className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded transition text-sm"
-                >
-                  Edit Rules
-                </button>
-              </CollapsibleSection>
-            ) : (
-              // Validation settings: iterate over roles using structured keys
-              <>
-                {roles.length > 0 ? (
-                  <div className="mb-4">
-                    {roles.map((role) => {
-                      // Generate a structured key based on role type:
-                      // For client roles, use: resource_access.{clientId}.roles.{role.name}
-                      // For realm roles, use: realm_access.roles.{role.name}
-                      const roleKey =
-                        role.clientRole && role.clientId
-                          ? `resource_access.${role.clientId}.roles.${role.name}`
-                          : `realm_access.roles.${role.name}`;
-                      const ruleSet: RuleSet =
-                        globalSettings.validationSettings[roleKey] || { rules: [] };
-                      return (
-                        <CollapsibleSection
-                          key={role.id}
-                          title={roleKey}
-                          defaultExpanded={false}
-                        >
-                          {ruleSet.rules.length > 0 ? (
-                            ruleSet.rules.map((rule, idx) => (
-                              <div key={idx} className="ml-4 mt-1 text-sm text-gray-600">
-                                <div>
-                                  <span className="font-semibold">Field:</span> {rule.field}
-                                </div>
-                                <div>
-                                  <span className="font-semibold">Method:</span>{" "}
-                                  {rule.conditions[0]?.method}
-                                </div>
-                                <div>
-                                  <span className="font-semibold">Values:</span>{" "}
-                                  {(rule.conditions[0]?.values || []).join(", ")}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="ml-4 text-sm text-gray-500">
-                              No rules set for this role.
-                            </p>
-                          )}
-                          <button
-                            onClick={() => openGlobalRulesForValidation(roleKey)}
-                            className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded transition text-sm"
-                          >
-                            Edit Rules
-                          </button>
-                        </CollapsibleSection>
-                      );
-                    })}
+                    {ruleSet.rules && ruleSet.rules.length > 0 ? (
+                      ruleSet.rules.map((rule, idx) => (
+                        <div key={idx} className={styles.ruleItem}>
+                          <div>
+                            <strong>Field:</strong> {rule.field}
+                          </div>
+                          <div>
+                            <strong>Method:</strong> {rule.conditions[0]?.method}
+                          </div>
+                          <div>
+                            <strong>Values:</strong>{" "}
+                            {(rule.conditions[0]?.values || []).join(", ")}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className={styles.emptyState}>
+                        No authorization rules have been set for {key}.
+                      </p>
+                    )}
+                    <button
+                      onClick={() => openGlobalRulesForAuthorization(key)}
+                      className={styles.primaryButton}
+                    >
+                      Edit Authorization Rules for {key}
+                    </button>
                   </div>
-                ) : (
-                  <p className="mb-4 text-gray-500">
-                    No roles available to configure validation settings.
-                  </p>
-                )}
-              </>
-            )}
+                ))}
+            </section>
+
+            {/* Validation Rules */}
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle}>Validation Rules</h3>
+              </div>
+              {roles.length > 0 ? (
+                roles.map((role) => {
+                  const roleKey =
+                    role.clientRole && role.clientId
+                      ? `resource_access.${role.clientId}.roles.${role.name}`
+                      : `realm_access.roles.${role.name}`;
+                  const ruleSet: RuleSet =
+                    globalSettings.validationSettings[roleKey] || { rules: [] };
+
+                  return (
+                    <div key={role.id} className={styles.validationSection}>
+                      <div className={styles.validationHeader}>
+                        <strong className={styles.validationTitle}>{roleKey}</strong>
+                        <button
+                          onClick={() => openGlobalRulesForValidation(roleKey)}
+                          className={styles.primaryButton}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      {ruleSet.rules.length > 0 ? (
+                        ruleSet.rules.map((r, idx) => (
+                          <div key={idx} className={styles.ruleItem}>
+                            <div>
+                              <strong>Field:</strong> {r.field}
+                            </div>
+                            <div>
+                              <strong>Method:</strong> {r.conditions[0]?.method}
+                            </div>
+                            <div>
+                              <strong>Values:</strong>{" "}
+                              {(r.conditions[0]?.values || []).join(", ")}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className={styles.emptyState}>
+                          No validation rules set for this role.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <p className={styles.emptyState}>
+                  No roles available to configure validation rules.
+                </p>
+              )}
+            </section>
           </div>
         )}
 
         {view === "users" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-2xl font-semibold mb-4">Manage Users</h3>
-            <button className="mb-4 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">
-              <FaPlus className="inline mr-2" /> Add User
-            </button>
-            <table className="min-w-full bg-white border border-gray-200">
+          <div className={styles.adminCard}>
+            <h2 className={styles.cardTitle}>Manage Users</h2>
+            <p className={styles.cardSubtitle}>Review and manage user accounts.</p>
+            <table className={styles.dataTable}>
               <thead>
-                <tr className="bg-blue-700 text-white">
-                  <th className="p-3 text-left">Name</th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Role</th>
-                  <th className="p-3 text-center">Actions</th>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b">
-                    <td className="p-3">{user.name}</td>
-                    <td className="p-3">{user.email}</td>
-                    <td className="p-3">{user.role}</td>
-                    <td className="p-3 flex gap-3 justify-center">
-                      <button className="text-yellow-500">
-                        <FaEdit />
-                      </button>
-                      <button className="text-red-500">
-                        <FaTrash />
-                      </button>
-                    </td>
+                  <tr key={user.id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>{user.role}</td>
                   </tr>
                 ))}
               </tbody>
@@ -386,54 +348,45 @@ export default function AdminDashboard() {
         )}
 
         {view === "roles" && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-2xl font-semibold">Manage Roles</h3>
-                <p className="text-gray-600">
-                  View, create and manage system roles.
-                </p>
-              </div>
-              <button
-                onClick={openAddRoleModal}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg"
-              >
-                <FaPlus className="inline mr-2" /> Add Role
+          <div className={styles.adminCard}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.cardTitle}>Manage Roles</h2>
+              <button onClick={openAddRoleModal} className={styles.primaryButton}>
+                <FaPlus /> Add Role
               </button>
             </div>
-
-            <table className="min-w-full bg-white border border-gray-200">
+            <table className={styles.dataTable}>
               <thead>
-                <tr className="bg-blue-700 text-white">
-                  <th className="p-3 text-left">Role Name</th>
-                  <th className="p-3 text-left">Description</th>
-                  <th className="p-3 text-center">Actions</th>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th style={{ textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {roles.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="p-4 text-center text-gray-500">
+                    <td colSpan={3} className={styles.emptyState}>
                       No roles available.
                     </td>
                   </tr>
                 ) : (
                   roles.map((role) => (
-                    <tr key={role.id} className="border-b">
-                      <td className="p-3">{role.name}</td>
-                      <td className="p-3 text-gray-600">
-                        {role.description || "No description"}
-                      </td>
-                      <td className="p-3 text-center flex justify-center gap-3">
+                    <tr key={role.id}>
+                      <td>{role.name}</td>
+                      <td>{role.description || "No description provided."}</td>
+                      <td className={styles.actionsCell}>
                         <button
                           onClick={() => openEditRoleModal(role)}
-                          className="text-yellow-500 hover:text-yellow-700"
+                          className={styles.iconButton}
+                          title="Edit Role"
                         >
                           <FaEdit />
                         </button>
                         <button
                           onClick={() => deleteRole(role.id)}
-                          className="text-red-500 hover:text-red-700"
+                          className={styles.iconButton}
+                          title="Delete Role"
                         >
                           <FaTrash />
                         </button>
@@ -445,7 +398,7 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
-      </div>
+      </main>
 
       {/* Role Editor Modal */}
       {roleModalOpen && (
@@ -460,7 +413,6 @@ export default function AdminDashboard() {
       {globalModalOpen && currentKey && (
         <GlobalSettingsModalForRole
           roleKey={currentKey}
-          // Pass a RuleSet – defaulting to an empty RuleSet if none exists
           settings={
             globalSettingsType === "authorization"
               ? globalSettings.authorizationSettings[currentKey] || { rules: [] }
@@ -475,16 +427,16 @@ export default function AdminDashboard() {
               authorizationSettings:
                 globalSettingsType === "authorization"
                   ? {
-                      ...globalSettings.authorizationSettings,
-                      [currentKey]: updatedRuleSet,
-                    }
+                    ...globalSettings.authorizationSettings,
+                    [currentKey]: updatedRuleSet,
+                  }
                   : globalSettings.authorizationSettings,
               validationSettings:
                 globalSettingsType === "validation"
                   ? {
-                      ...globalSettings.validationSettings,
-                      [currentKey]: updatedRuleSet,
-                    }
+                    ...globalSettings.validationSettings,
+                    [currentKey]: updatedRuleSet,
+                  }
                   : globalSettings.validationSettings,
             })
           }
@@ -495,32 +447,7 @@ export default function AdminDashboard() {
   );
 }
 
-// --- Collapsible Section Component ---
-const CollapsibleSection = ({
-  title,
-  children,
-  defaultExpanded = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultExpanded?: boolean;
-}) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  return (
-    <div className="border border-gray-200 rounded mb-4">
-      <div
-        className="flex justify-between items-center bg-gray-100 p-3 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <span className="text-gray-700 font-semibold">{title}</span>
-        <span>{expanded ? "-" : "+"}</span>
-      </div>
-      {expanded && <div className="p-3">{children}</div>}
-    </div>
-  );
-};
-
-// --- Sidebar Button Component ---
+/* --- Sidebar Button Component --- */
 const SidebarButton = ({
   onClick,
   icon,
@@ -531,18 +458,15 @@ const SidebarButton = ({
   icon: JSX.Element;
   text: string;
   active?: boolean;
-}) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center space-x-3 p-3 rounded-lg w-full transition-all duration-200 ${
-      active ? "bg-blue-700" : "hover:bg-blue-800"
-    }`}
-  >
-    {icon} <span>{text}</span>
-  </button>
-);
+}) => {
+  return (
+    <button onClick={onClick} className={`${styles.sidebarButton} ${active ? styles.active : ""}`}>
+      {icon} <span>{text}</span>
+    </button>
+  );
+};
 
-// --- Role Editor Modal ---
+/* --- Role Modal Component --- */
 const RoleModal = ({
   role,
   onClose,
@@ -562,55 +486,57 @@ const RoleModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md mx-4">
-        <h3 className="text-2xl font-semibold mb-6 text-gray-800">
-          {role ? "Edit Role" : "Add Role"}
+    <div
+      className={styles.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="roleModalTitle"
+    >
+      <div className={styles.vaultlessCard}>
+        <h3 id="roleModalTitle" className={styles.modalTitle}>
+          {role ? "Edit Role" : "Add New Role"}
         </h3>
+        <p className={styles.modalSubtitle}>
+          Provide clear details so users know what permissions this role grants.
+        </p>
         <form onSubmit={handleSubmit}>
-          <div className="mb-5">
-            <label className="block text-sm font-medium mb-1">Role Name</label>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Role Name</label>
             <input
               type="text"
-              className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.inputField}
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Administrator"
               required
             />
           </div>
-          <div className="mb-5">
-            <label className="block text-sm font-medium mb-1">Description</label>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Description</label>
             <textarea
-              className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.inputField}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the role's responsibilities"
               rows={3}
-            ></textarea>
+            />
           </div>
-          <div className="mb-5">
-            <label className="inline-flex items-center">
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>
               <input
                 type="checkbox"
                 checked={isAuthorizer}
                 onChange={(e) => setIsAuthorizer(e.target.checked)}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Is Authorizer Role?</span>
+              />{" "}
+              Is Authorizer Role?
             </label>
           </div>
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-100 transition"
-            >
+          <div className={styles.modalActions}>
+            <button type="button" onClick={onClose} className={styles.secondaryButton}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition"
-            >
-              Save
+            <button type="submit" className={styles.primaryButton}>
+              Save Role
             </button>
           </div>
         </form>
@@ -619,7 +545,7 @@ const RoleModal = ({
   );
 };
 
-// --- Global Settings Modal for Role ---
+/* --- Global Settings Modal for Role Component --- */
 interface GlobalSettingsModalForRoleProps {
   roleKey: string;
   settings: RuleSet;
@@ -635,7 +561,6 @@ const GlobalSettingsModalForRole = ({
   onSave,
   isAuthorization = false,
 }: GlobalSettingsModalForRoleProps) => {
-  // Use a RuleSet as local state (holds both rules and optional output)
   const [localRuleSet, setLocalRuleSet] = useState<RuleSet>(settings);
 
   const updateRuleField = (index: number, fieldValue: string) => {
@@ -662,7 +587,10 @@ const GlobalSettingsModalForRole = ({
     const newRules = [...localRuleSet.rules];
     newRules[ruleIndex] = {
       ...newRules[ruleIndex],
-      conditions: [...newRules[ruleIndex].conditions, { method: methods[0], values: [""] }],
+      conditions: [
+        ...newRules[ruleIndex].conditions,
+        { method: methods[0], values: [""] },
+      ],
     };
     setLocalRuleSet({ ...localRuleSet, rules: newRules });
   };
@@ -691,27 +619,30 @@ const GlobalSettingsModalForRole = ({
   };
 
   const handleSave = () => {
-    // For authorization settings, ensure ruleSetId is set to "threshold_rule"
     const updatedRuleSet = isAuthorization
       ? { ...localRuleSet, ruleSetId: "threshold_rule" }
       : localRuleSet;
-
-      const { ruleSetId, ...rest } = updatedRuleSet;
-    onSave({ ruleSetId, ...rest});
+    const { ruleSetId, ...rest } = updatedRuleSet;
+    onSave({ ruleSetId, ...rest });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-4xl mx-4">
-        <h3 className="text-2xl font-semibold mb-6 text-gray-800">
-          Edit Global Rules for <span className="font-bold">{roleKey}</span>
+    <div
+      className={styles.modalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="globalRulesModalTitle"
+    >
+      <div className={styles.vaultlessCardLarge}>
+        <h3 id="globalRulesModalTitle" className={styles.modalTitle}>
+          Edit Global Rules for <strong>{roleKey}</strong>
         </h3>
-        {/* For authorization settings, display a global threshold input */}
+        <p className={styles.modalSubtitle}>
+          Configure the rules that affect this role’s access.
+        </p>
         {isAuthorization && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              Output Threshold
-            </label>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Required User Approvals</label>
             <input
               type="number"
               value={localRuleSet.outputs?.threshold || ""}
@@ -721,38 +652,38 @@ const GlobalSettingsModalForRole = ({
                   outputs: { threshold: Number(e.target.value) },
                 })
               }
-              className="w-full border border-gray-300 p-2 rounded"
+              className={styles.inputField}
+              placeholder="e.g., 3"
             />
           </div>
         )}
-        <div className="mb-6">
+        <div className={styles.rulesEditor}>
           {localRuleSet.rules.map((rule, index) => (
-            <div key={index} className="mb-4 p-4 border rounded bg-gray-50">
-              <div className="flex flex-col md:flex-row gap-4 mb-3">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Field</label>
-                  <select
-                    value={rule.field}
-                    onChange={(e) => updateRuleField(index, e.target.value)}
-                    className="w-full border border-gray-300 p-2 rounded"
-                  >
-                    {fields.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div key={index} className={styles.ruleEditor}>
+              <div className={styles.inputGroup}>
+                <label className={styles.label}>Field</label>
+                <select
+                  value={rule.field}
+                  onChange={(e) => updateRuleField(index, e.target.value)}
+                  className={styles.inputField}
+                >
+                  {fields.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
               </div>
               {rule.conditions.map((condition, condIndex) => (
-                <div key={condIndex} className="border p-2 mb-2 rounded">
-                  <div className="flex gap-2">
+                <div key={condIndex} className={styles.conditionEditor}>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Method</label>
                     <select
                       value={condition.method}
                       onChange={(e) =>
                         updateConditionField(index, condIndex, "method", e.target.value)
                       }
-                      className="border p-2 rounded w-1/3"
+                      className={styles.inputField}
                     >
                       {methods.map((m) => (
                         <option key={m} value={m}>
@@ -760,10 +691,12 @@ const GlobalSettingsModalForRole = ({
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className={styles.inputGroup}>
                     {condition.method === "BETWEEN" ? (
-                      <>
+                      <div className={styles.betweenInputs}>
                         <input
-                          className="border p-2 rounded w-1/4"
+                          className={styles.inputField}
                           value={condition.values[0]}
                           onChange={(e) =>
                             updateConditionField(index, condIndex, "values", [
@@ -771,9 +704,10 @@ const GlobalSettingsModalForRole = ({
                               condition.values[1],
                             ])
                           }
+                          placeholder="Min"
                         />
                         <input
-                          className="border p-2 rounded w-1/4"
+                          className={styles.inputField}
                           value={condition.values[1]}
                           onChange={(e) =>
                             updateConditionField(index, condIndex, "values", [
@@ -781,60 +715,45 @@ const GlobalSettingsModalForRole = ({
                               e.target.value,
                             ])
                           }
+                          placeholder="Max"
                         />
-                      </>
+                      </div>
                     ) : (
                       <input
-                        className="border p-2 rounded w-1/2"
+                        className={styles.inputField}
                         value={condition.values[0]}
                         onChange={(e) =>
                           updateConditionField(index, condIndex, "values", [e.target.value])
                         }
+                        placeholder="Value"
                       />
                     )}
-                    <button
-                      onClick={() => removeConditionFromRule(index, condIndex)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      Remove
-                    </button>
                   </div>
+                  <button
+                    onClick={() => removeConditionFromRule(index, condIndex)}
+                    className={styles.secondaryButton}
+                  >
+                    Remove Condition
+                  </button>
                 </div>
               ))}
-              <button
-                onClick={() => addConditionToRule(index)}
-                className="text-sm px-2 py-1 bg-green-600 text-white rounded"
-              >
-                Add Condition
+              <button onClick={() => addConditionToRule(index)} className={styles.primaryButton}>
+                + Add Condition
               </button>
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => removeRule(index)}
-                  className="text-red-500 hover:text-red-600"
-                >
-                  Delete Rule
-                </button>
-              </div>
+              <button onClick={() => removeRule(index)} className={styles.secondaryButton}>
+                Delete Rule
+              </button>
             </div>
           ))}
-          <button
-            onClick={addRule}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded"
-          >
-            Add Rule
+          <button onClick={addRule} className={styles.primaryButton}>
+            <FaPlus /> Add Rule
           </button>
         </div>
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-100"
-          >
+        <div className={styles.modalActions}>
+          <button onClick={onClose} className={styles.secondaryButton}>
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
-          >
+          <button onClick={handleSave} className={styles.primaryButton}>
             Save Global Rules
           </button>
         </div>

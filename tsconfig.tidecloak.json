@@ -1,0 +1,12 @@
+{
+    "include": [
+        "node_modules/tidecloak-js/**/*.js"
+    ],
+    "compilerOptions": {
+        "declaration": true,
+        "allowJs": true,
+        "emitDeclarationOnly": true,
+        "outDir": "@types/tidecloak-js",
+        "skipLibCheck": true
+    }
+}

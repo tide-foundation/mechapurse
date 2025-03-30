@@ -1,5 +1,7 @@
 "use client";
 
+import "@/styles/vaultless.css";
+
 import IAMService from "@/lib/IAMService";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, JSX } from "react";
@@ -8,9 +10,9 @@ import {
     FaPaperPlane,
     FaHistory,
     FaSignOutAlt,
-    FaUserShield, // Admin icon
+    FaUserShield,
 } from "react-icons/fa";
-import { useAuth } from "@/components/AuthContext"; // Assumes AuthContext is defined
+import { useAuth } from "@/components/AuthContext";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -23,40 +25,40 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         await IAMService.doLogout();
     };
 
-    // Hide navbar on login page (`/`)
     if (pathname === "/" || pathname === "/auth/failure") {
         return <main className="w-full">{children}</main>;
     }
 
     return (
         <div className="h-screen flex flex-col">
-            {/* Navbar */}
-            <header className="bg-gradient-to-b from-blue-900 to-blue-800 shadow-md p-4 text-white fixed w-full z-50 h-16">
+            {/* Navbar  bg-gradient-to-b from-[#0A0A0C] to-[#1A1C20] 1e3a8a  1e40af*/}
+            <header className="bg-gradient-to-b from-[#0A0A0C] to-[#1A1C20] shadow-md p-4 text-white fixed w-full z-50 h-16 border-b border-[#4DA8DA33]">
                 <div className="container mx-auto flex justify-between items-center px-4">
                     {/* Logo */}
                     <h1
-                        className="text-2xl font-bold cursor-pointer hover:text-[#4DA8DA] transition-all flex items-center"
+                        className="text-2xl font-bold cursor-pointer hover:text-[#4DA8DA] transition-all tracking-wide uppercase"
                         onClick={() => router.push("/authenticated/dashboard")}
                     >
-                        Tide Wallet
+                        Vaultless
                     </h1>
+
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex space-x-6 items-center">
-                        {/* Render Admin nav first if the user has the admin role */}
                         {hasRole("tide-realm-admin", "realm-management") && (
                             <NavButton onClick={() => router.push("/authenticated/admin")} icon={<FaUserShield />} text="Admin" />
                         )}
                         <NavButton onClick={() => router.push("/authenticated/dashboard")} icon={<FaHome />} text="Dashboard" />
                         <NavButton onClick={() => router.push("/authenticated/transactions/send")} icon={<FaPaperPlane />} text="Send" />
                         <NavButton onClick={() => router.push("/authenticated/transactions/history")} icon={<FaHistory />} text="History" />
-                        {/* Direct Logout Button */}
                         <NavButton onClick={handleLogout} icon={<FaSignOutAlt />} text="Logout" />
                     </nav>
                 </div>
             </header>
 
             {/* Page Content */}
-            <main className="flex-1 h-[calc(100vh-4rem)] mt-16 overflow-hidden">{children}</main>
+            <main className="bg-[#e5e7eb] flex-1 h-[calc(100vh-4rem)] mt-16 overflow-hidden">
+                {children}
+            </main>
         </div>
     );
 }
