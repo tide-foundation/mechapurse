@@ -1,7 +1,8 @@
-import { AuthorizerInfoRequest, RealmKeyRules, RuleDefinition, RulesContainer } from "@/interfaces/interface";
+import { AuthorizerInfoRequest, RealmKeyRules, RuleDefinition, RuleSettings } from "@/interfaces/interface";
 import kcData from "../tidecloak.json";
-import { ClientRepresentation, ComponentRepresentation, RoleRepresentation } from "./keycloakTypes";
+import { ChangeSetRequest, ClientRepresentation, ComponentRepresentation, MappingsRepresentation, RoleRepresentation, UserRepresentation } from "./keycloakTypes";
 import { TX_MANAGEMENT_CLIENT } from "../app/constants/client";
+import { Roles } from "@/app/constants/roles";
 
 export interface InitCertResponse {
     cert: string;
@@ -11,6 +12,19 @@ const KEYCLOAK_AUTH_SERVER = kcData["auth-server-url"];
 const REALM = kcData["realm"];
 
 const TC_URL = `${KEYCLOAK_AUTH_SERVER}/admin/realms/${REALM}`;
+const REALM_MGMT = "realm-management";
+const TX_MGMT = 'TX_MANAGMENT'
+
+
+export const getTideRealmAdminInitCert = async (token: string): Promise<InitCertResponse> => {
+    const client = await getClientByClientId(REALM_MGMT, token)
+    if(client === null || client?.id === undefined){
+        throw new Error(`Could not get init cert for tide-realm-admin, client ${REALM_MGMT} does not exist`);
+    }
+
+    const role = await getClientRoleByName(Roles.Admin, client.id, token);
+    return await getRoleInitCert(role.id!, token);
+}
 
 export const getRoleInitCert = async (roleId: string, token: string): Promise<InitCertResponse> => {
     const response = await fetch(`${TC_URL}/tideAdminResources/get-init-cert?roleId=${roleId}`, {
@@ -75,7 +89,6 @@ export const getTideVendorKeyConfig = async (token: string): Promise<ComponentRe
         return null;
     }
     const body = await response.json();
-    console.log(body);
     return body[0];
 };
 
@@ -128,12 +141,35 @@ export const getTransactionRoles = async (token: string): Promise<RoleRepresenta
     return await response.json();
 };
 
+export const getTideRealmAdminRole = async (token: string): Promise<RoleRepresentation> => {
+    const client: ClientRepresentation | null = await getClientByClientId(REALM_MGMT, token); // TODO: add to constants 
+    if(client === null) throw new Error("No client found with clientId: " + REALM_MGMT);
+
+    const response = await fetch(`${TC_URL}/clients/${client.id}/roles?search=${Roles.Admin}`, {
+        method: 'GET',
+        headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) {
+        console.error(`Error fetching tide realm admin role: ${response.statusText}`);
+        throw new Error("Error fetching tide realm admin role")
+    }
+
+    const roles = await response.json()
+    return roles[0];
+}; 
+
 export const getRealmKeyRules = async (token: string): Promise<RealmKeyRules> => {
     const tideVendorKeyConfig: ComponentRepresentation | null = await getTideVendorKeyConfig(token);
 
     if (!tideVendorKeyConfig?.config) {
         return {
-            rules: { authorizationSettings: {}, validationSettings: {} },
+            rules: {
+                id: "",
+                validationSettings: {},
+              },
             rulesCert: "",
         };
     }
@@ -141,9 +177,9 @@ export const getRealmKeyRules = async (token: string): Promise<RealmKeyRules> =>
     const rulesStr: string | undefined = tideVendorKeyConfig.config["rules"]?.[0];
     const rulesCertStr: string = tideVendorKeyConfig.config["rulesCert"]?.[0] ?? "";
 
-    const rules: RulesContainer = rulesStr
+    const rules: RuleSettings = rulesStr
         ? JSON.parse(rulesStr)
-        : { authorizationSettings: {}, validationSettings: {} };
+        : { validationSettings: {} };
 
     return { rules, rulesCert: rulesCertStr };
 };
@@ -194,22 +230,30 @@ export const getClientById = async (
     }
 };
 
-export const saveAndSignRules = async (rules: string, token: string): Promise<void> => {
-    console.log(JSON.stringify(rules));
+export const saveAndSignRules = async (ruleDraft: string, expiry: string, authorizations: string[], token: string, newSetting: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append("ruleDraft", ruleDraft);
+    authorizations.forEach(auth => formData.append("authorizations", auth));
+    formData.append("expiry", expiry);
+    formData.append("newSetting", newSetting);
+
+
+    
     const response = await fetch(`${TC_URL}/vendorResources/sign-rules`, {
         method: 'POST',
         headers: {
             accept: 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(rules)
+        body: formData
     });
+    const res = await response.text();
     if (!response.ok) {
         const errorBody = await response.text();
         console.error(`Error saving and signing rules: ${response.statusText}`);
         throw new Error(`Error saving and signing rules: ${errorBody}`);
     }
-    return;
+    return res;
 };
 
 export const createTxMgmtClient = async (token: string): Promise<void> => {
@@ -269,8 +313,6 @@ export const markAsAuthorizerRole = async (roleId: string, token: string): Promi
         "isAuthorizerRole": ["true"],
     };
 
-    console.log(roleRep)
-
     const test = await fetch(`${TC_URL}/roles-by-id/${roleId}`, {
         method: 'PUT',
         headers: {
@@ -281,13 +323,11 @@ export const markAsAuthorizerRole = async (roleId: string, token: string): Promi
 
     });
 
-    console.log(test)
     return;
 };
 
 
 export const addAuthorizerInfo = async (roleId: string, authInfo: AuthorizerInfoRequest, token: string): Promise<void> => {
-    console.log(authInfo)
     const response = await fetch(`${TC_URL}/tideAdminResources/add-authorizer-info?roleId=${roleId}`, {
         method: 'POST',
         headers: {
@@ -318,3 +358,130 @@ export const getClientRoleByName = async (roleName: string, clientuuid: string, 
     }
     return response.json();
 };
+
+export const getAdminThreshold = async (token: string): Promise<string> => {
+    const realmMgmt = "realm-management";
+    const tideRealmAdmin = Roles.Admin;
+
+    const clientResp: ClientRepresentation | null = await getClientByClientId("realm-management", token);
+    if(clientResp === null) throw new Error("No client found with clientId: " + realmMgmt);
+
+    const roleRes: RoleRepresentation = await getClientRoleByName(tideRealmAdmin, clientResp.id!, token);
+
+    return roleRes.attributes!["tideThreshold"][0]
+}
+
+
+export const GetUsers = async (token: string): Promise<UserRepresentation[]> => {
+    const response = await fetch(`${TC_URL}/users`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        console.error(`Error getting users: ${response.statusText}`);
+        return [];
+    }
+    return await response.json();
+};
+
+export const GrantUserRole = async (userId: string,  roleName: string, token: string): Promise<void> => {
+    const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
+    if(client === null || client?.id === undefined){
+        throw new Error(`Could not grant user role, client ${TX_MANAGEMENT_CLIENT} does not exist`);
+    }
+
+    const role = await getClientRoleByName(roleName, client.id, token);
+
+    const response = await fetch(`${TC_URL}/users/${userId}/role-mappings/clients/${client.id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(role)
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error adding authorizer info: ${response.statusText}`);
+        throw new Error(`Error adding authorizer info: ${errorBody}`);
+    }
+    return;  
+}
+
+
+export const RemoveUserRole = async (userId: string,  roleName: string, token: string): Promise<void> => {
+    const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
+    if(client === null || client?.id === undefined){
+        throw new Error(`Could not grant user role, client ${TX_MANAGEMENT_CLIENT} does not exist`);
+    }
+
+    const role = await getClientRoleByName(roleName, client.id, token);
+
+    const response = await fetch(`${TC_URL}/users/${userId}/role-mappings/clients/${client.id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(role)
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error adding authorizer info: ${response.statusText}`);
+        throw new Error(`Error adding authorizer info: ${errorBody}`);
+    }
+    return;  
+}
+
+export const AddUser = async (userRep: UserRepresentation, token: string): Promise<void> => {
+    const response = await fetch(`${TC_URL}/users}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userRep)
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error adding authorizer info: ${response.statusText}`);
+        throw new Error(`Error adding authorizer info: ${errorBody}`);
+    }
+    return;  
+}
+
+export const GetUserRoleMappings = async (userId: string, token: string): Promise<MappingsRepresentation> => {
+
+    const response = await fetch(`${TC_URL}/users/${userId}/role-mappings`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        console.error(`Error getting user role mappings: ${response.statusText}`);
+        return {};
+    }
+    return await response.json();   
+}
+
+export const GetUserChangeRequests = async (token: string): Promise<ChangeSetRequest> => {
+
+    const response = await fetch(`${TC_URL}/tide-admin/change-set/users/requests`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error getting user change requests: ${response.statusText}`);
+        throw new Error(`Error getting user change requests: ${errorBody}`);
+    }
+    return await response.json();   
+}

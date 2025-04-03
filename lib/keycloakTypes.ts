@@ -1,3 +1,11 @@
+// Tidecloak
+export interface ChangeSetRequest {
+  changeSetId: string,
+  changeSetType: string,
+  actionType: string,
+}
+
+// Keycloak
 export interface ClientRepresentation {
     id?: string;
     clientId?: string;
@@ -74,3 +82,123 @@ export interface ComponentRepresentation {
     config?: Record<string, any[]>; // A map where each key has an array as its value
 }
 
+export interface UserRepresentation {
+    id?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    emailVerified?: boolean;
+    attributes?: { [key: string]: string[] };
+    userProfileMetadata?: UserProfileMetadata;
+    self?: string;
+    origin?: string;
+    createdTimestamp?: number; // int64
+    enabled?: boolean;
+    totp?: boolean;
+    federationLink?: string;
+    serviceAccountClientId?: string;
+    credentials?: CredentialRepresentation[];
+    disableableCredentialTypes?: string[]; // using an array for set of strings
+    requiredActions?: string[];
+    federatedIdentities?: FederatedIdentityRepresentation[];
+    realmRoles?: string[];
+    clientRoles?: { [key: string]: string[] };
+    clientConsents?: UserConsentRepresentation[];
+    notBefore?: number; // int32
+    applicationRoles?: { [key: string]: string[] };
+    socialLinks?: SocialLinkRepresentation[];
+    groups?: string[];
+    access?: { [key: string]: boolean };
+  }
+  
+  export interface UserProfileMetadata {
+    attributes?: UserProfileAttributeMetadata[];
+    groups?: UserProfileAttributeGroupMetadata[];
+  }
+
+  export interface UserProfileAttributeGroupMetadata {
+    name?: string;
+    displayHeader?: string;
+    displayDescription?: string;
+    annotations?: { [key: string]: any };
+  }
+  
+
+  export interface UserProfileAttributeMetadata {
+    name?: string;
+    displayName?: string;
+    required?: boolean;
+    readOnly?: boolean;
+    annotations?: { [key: string]: any };
+    validators?: { [key: string]: any };
+    group?: string;
+    multivalued?: boolean;
+  }
+
+  
+  export interface UserProfileAttributeMetadata {
+    name?: string;
+    displayName?: string;
+    required?: boolean;
+    readOnly?: boolean;
+    annotations?: { [key: string]: any };
+    validators?: { [key: string]: any };
+    group?: string;
+    multivalued?: boolean;
+  }
+
+  
+  export interface CredentialRepresentation {
+    id?: string;
+    type?: string;
+    userLabel?: string;
+    createdDate?: number; // int64
+    secretData?: string;
+    credentialData?: string;
+    priority?: number; // int32
+    value?: string;
+    temporary?: boolean;
+    device?: string;
+    hashedSaltedValue?: string;
+    salt?: string;
+    hashIterations?: number; // int32
+    counter?: number; // int32
+    algorithm?: string;
+    digits?: number; // int32
+    period?: number; // int32
+    config?: { [key: string]: any };
+  }
+  
+  export interface FederatedIdentityRepresentation {
+    identityProvider?: string;
+    userId?: string;
+    userName?: string;
+  }
+  
+  
+  export interface SocialLinkRepresentation {
+    socialProvider?: string;
+    socialUserId?: string;
+    socialUsername?: string;
+  }
+  
+  export interface UserConsentRepresentation {
+    clientId?: string;
+    grantedClientScopes?: string[];
+    createdDate?: number; // int64
+    lastUpdatedDate?: number; // int64
+    grantedRealmRoles?: string[];
+  }
+  
+  export interface MappingsRepresentation {
+    realmMappings?: RoleRepresentation[];
+    clientMappings?: { [key: string]: ClientMappingsRepresentation };
+  }
+  
+  export interface ClientMappingsRepresentation {
+    id?: string;
+    client?: string;
+    mappings?: RoleRepresentation[];
+  }
+    

@@ -9,7 +9,7 @@ import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { createApprovalURI, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
 import { routeRoleMapping } from "@/lib/authConfig";
-import { AddAdminAuthorization, AddDraftSignRequest, GetAllDraftSignRequests, GetDraftSignRequest } from "@/lib/db";
+import { AddAuthorization, AddDraftSignRequest, GetAllDraftSignRequests, GetDraftSignRequest } from "@/lib/db";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";

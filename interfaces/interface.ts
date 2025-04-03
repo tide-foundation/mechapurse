@@ -6,7 +6,7 @@ export interface DraftSignRequest {
     txBody: string,
     draft: string,
     draftJson: string,
-    creationTimestamp: string
+    expiry: string
 }
 
 export interface AdminAuthorizationPack {
@@ -20,7 +20,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    role: string;
+    role: string[];
 }
 
 export interface Role {
@@ -39,9 +39,10 @@ export interface AuthorizerInfoRequest {
     authorizerType: string;
 }
 
-export interface RulesContainer {
-    authorizationSettings: { [id: string]: RuleSet };
-    validationSettings: { [id: string]: RuleSet };
+export interface RuleSettings {
+    id: string,
+    validationSettings: { [id: string]: RuleSet[] };
+    previousVersion?: string,
 }
 
 export interface RuleSet {
@@ -54,7 +55,7 @@ export interface RuleDefinition {
     ruleId?: string;
     field: string;
     conditions: RuleCondition[];
-    aud: string;
+    aud?: string;
     output?: { [key: string]: number };
 }
 
@@ -69,7 +70,7 @@ export interface RuleConfiguration {
 }
 
 export interface RealmKeyRules {
-    rules: RulesContainer;
+    rules: RuleSettings;
     rulesCert: string;
 }
 

@@ -1,332 +1,565 @@
 /* Layout & General Styles */
 .adminLayout {
-    display: flex;
-    height: 100vh;
-    font-family: Arial, sans-serif;
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
 }
 
 /* Sidebar */
 .adminSidebar {
-    width: 250px;
-    background: #2d2d2d;
-    color: #fff;
-    padding: 1.5rem;
+  width: 250px;
+  background: #2d2d2d;
+  color: #fff;
+  padding: 1.5rem;
 }
 
 .sidebarTitle {
-    font-size: 1.8rem;
-    margin-bottom: 2rem;
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
 }
 
-/* Sidebar Button */
 .sidebarButton {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border: none;
-    background: none;
-    color: inherit;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  color: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-bottom: 0.5rem;
 }
 
 .sidebarButton:hover,
 .active {
-    background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Main Content */
 .adminContent {
-    flex: 1;
-    padding: 2rem;
-    background: #f8f8f8;
-    overflow-y: auto;
+  flex: 1;
+  padding: 2rem;
+  background: #f8f8f8;
+  overflow-y: auto;
 }
 
-/* Card Styles */
 .adminCard {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .cardTitle {
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 .cardSubtitle {
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 1.5rem;
 }
 
 /* Section & Header */
 .section {
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .sectionHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 0.5rem;
+}
+
+.sectionHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .sectionTitle {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
-    margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
 }
 
-.sectionSubtitle {
-    font-size: 1rem;
-    color: #777;
-    margin: 0;
+/* New Collapsible Section Styles */
+.collapsibleSection {
+  margin-bottom: 1.5rem;
+}
+
+.collapsibleContent {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.expanded {
+  max-height: 1000px; /* adjust as needed */
+  opacity: 1;
+}
+
+/* Expand Button */
+.expandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.iconRotated {
+  transform: rotate(90deg);
+}
+
+/* RuleSet Card & Header */
+.ruleSetCard {
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.ruleSetExpandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-right: 0.75rem;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.ruleSetTitle {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.editButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  font-size: 1.1rem;
+  transition: color 0.2s ease;
+}
+
+.editButton:hover {
+  color: #0070f3;
+}
+
+/* Card Content: Added padding for better spacing */
+.cardContent {
+  padding: 1rem;
+  display: "flex";
+  flex-direction: "row";
+  align-items: "stretch";
 }
 
 /* Threshold Info */
 .thresholdInfo {
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-    color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #333;
 }
 
-/* Authorization Ruleset container */
-.authorizationRuleset {
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px dashed #ccc;
+.thresholdLabel {
+  font-size: 0.9em;
+}
+
+.thresholdValue {
+  font-size: 0.9em;
 }
 
 /* Data Table */
 .dataTable {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .dataTable th,
 .dataTable td {
-    border: 1px solid #ddd;
-    padding: 0.75rem;
-    text-align: left;
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
 }
 
 .dataTable tr:hover {
-    background: #f1f1f1;
+  background: #f1f1f1;
 }
 
 .actionsCell {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Buttons */
 .primaryButton {
-    background: #0070f3;
-    color: #fff;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s ease, transform 0.1s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
+  background: #0070f3;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .primaryButton:hover {
-    background: #005bb5;
-    transform: translateY(-1px);
+  background: #005bb5;
+  transform: translateY(-1px);
 }
 
 .secondaryButton {
-    background: #e0e0e0;
-    color: #333;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s ease, transform 0.1s ease;
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .secondaryButton:hover {
-    background: #c0c0c0;
-    transform: translateY(-1px);
+  background: #c0c0c0;
+  transform: translateY(-1px);
 }
 
 .iconButton {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 0.3rem;
-    transition: color 0.2s ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.3rem;
+  transition: color 0.2s ease;
 }
 
 .iconButton:hover {
-    color: #0070f3;
+  color: #0070f3;
+}
+
+/* Save/Revert Container */
+.saveActionsContainer {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
 }
 
 /* Modal Styles */
 .modalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-.vaultlessCard {
-    background: #fff;
-    border-radius: 8px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s ease;
+.appCard {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
 }
 
-.vaultlessCardLarge {
-    background: #fff;
-    border-radius: 8px;
-    padding: 2rem;
-    width: 100%;
-    max-width: 800px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s ease;
+.appCardLarge {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
 }
 
 /* Input & Form Groups */
 .inputGroup {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
 
 .inputField {
-    width: 100%;
-    padding: 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    transition: border-color 0.2s ease;
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.2s ease;
 }
 
 .inputField:focus {
-    outline: none;
-    border-color: #0070f3;
+  outline: none;
+  border-color: #0070f3;
 }
 
 /* Modal Actions */
 .modalActions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
 /* Rule Items */
 .ruleItem,
 .ruleEditor {
-    padding: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    background: #fafafa;
-}
-
-/* Validation Section */
-.validationSection {
-    margin-bottom: 1.5rem;
-}
-
-.validationHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.validationTitle {
-    font-size: 1.3rem;
-    font-weight: 600;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  background: #fafafa;
 }
 
 /* Condition Editor */
 .conditionEditor {
-    margin-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* BETWEEN inputs */
 .betweenInputs {
-    display: flex;
-    gap: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .rulesEditor {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 /* Modal Titles & Subtitles */
 .modalTitle {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 .modalSubtitle {
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 1.5rem;
 }
 
 /* Empty State Message */
 .emptyState {
-    color: #999;
-    font-style: italic;
-    text-align: center;
-    padding: 1rem 0;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem 0;
 }
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-    .adminLayout {
-        flex-direction: column;
-    }
+  .adminLayout {
+    flex-direction: column;
+  }
 
-    .adminSidebar {
-        width: 100%;
-        padding: 1rem;
-        text-align: center;
-    }
+  .adminSidebar {
+    width: 100%;
+    padding: 1rem;
+    text-align: center;
+  }
 
-    .adminContent {
-        padding: 1rem;
-    }
+  .adminContent {
+    padding: 1rem;
+  }
+}
+.quickViewChangeRequestCard {
+  display: flex;
+  flex-direction: row;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+
+.summaryColumn {
+  flex: 1;
+  padding-right: 1rem;
+  border-right: 1px solid #ccc;
+}
+
+.detailsColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-left: 1rem;
+}
+
+.detailsToggleButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #0070f3;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.fixedBox {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  background: #f9f9f9;
+}
+
+.reviewButtonContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+/* ====================================================================== */
+/* Additional CSS for Updated User Modal                                */
+/* ====================================================================== */
+
+/* Updated User Modal Card */
+.userModalCard {
+  max-width: 700px; /* Increased width for better layout */
+}
+
+/* New Styles for Dual-Panel Role Management */
+.rolesContainer {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.assignedRoles,
+.availableRoles {
+  flex: 1;
+  background: #f9f9f9;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.assignedRoles h4,
+.availableRoles h4 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+/* Roles list container with a max height and scroll */
+.rolesList {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* List styling for roles */
+.roleList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Chip styling for each role */
+.roleChip {
+  display: inline-flex;
+  align-items: center;
+  background: #e0e0e0;
+  color: #333;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  margin: 0.2rem;
+  font-size: 0.9rem;
+}
+
+/* Button styles for role chips */
+.roleChip button {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  margin-left: 0.3rem;
+  cursor: pointer;
+}
+
+.removeRoleButton {
+  color: #ff0000;
+}
+
+.addRoleButton {
+  color: #0070f3;
+}
+
+/* New Styles for Link Tide Account Section (without URL preview) */
+.copyLinkContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.copyLinkButton {
+  background: #0070f3;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.copyLinkButton:hover {
+  background: #005bb5;
+}
+
+.copyToast {
+  font-size: 0.9rem;
+  color: #0070f3;
 }

@@ -20,7 +20,7 @@ export default function PendingApprovals({
 }: PendingApprovalsProps) {
     return (
         <div className="mt-10 w-full max-w-7xl">
-            <div className="vaultless-pending-container">
+            <div className="app-pending-container">
                 <h2 className="text-lg font-semibold mb-3 text-center">
                     Transactions Pending Approval
                 </h2>
@@ -32,20 +32,20 @@ export default function PendingApprovals({
                     <>
                         <button
                             onClick={onScrollLeft}
-                            className="vaultless-scroll-button left-4"
+                            className="app-scroll-button left-4"
                         >
                             <FaArrowLeft className="text-white" />
                         </button>
 
-                        <div ref={scrollRef} className="vaultless-scroll-container">
+                        <div ref={scrollRef} className="app-scroll-container">
                             {pendingTransactions.map((tx) => (
-                                <div key={tx.id} className="vaultless-draft-card">
+                                <div key={tx.id} className="app-draft-card">
                                     <pre className="text-xs text-white overflow-x-auto whitespace-pre-wrap">
                                         {prettyJson(tx.draftJson)}
                                     </pre>
                                     <button
                                         onClick={() => onReview(tx)}
-                                        className="vaultless-review-button"
+                                        className="app-review-button"
                                     >
                                         Review
                                     </button>
@@ -55,7 +55,7 @@ export default function PendingApprovals({
 
                         <button
                             onClick={onScrollRight}
-                            className="vaultless-scroll-button right-4"
+                            className="app-scroll-button right-4"
                         >
                             <FaArrowRight className="text-white" />
                         </button>

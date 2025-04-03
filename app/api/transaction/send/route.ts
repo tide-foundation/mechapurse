@@ -144,8 +144,6 @@ export async function POST(req: NextRequest) {
         const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
         const vKey = Vkey.new(publicKey);
 
-        console.log("sig !!")
-
         const sig = Ed25519Signature.from_bytes(base64ToBytes(sigBase64));
         const vkeyWitness = CardanoWasm.Vkeywitness.new(vKey, sig);
         vkeyWitnesses.add(vkeyWitness);
@@ -153,9 +151,7 @@ export async function POST(req: NextRequest) {
         const witnesses = CardanoWasm.TransactionWitnessSet.new();
         witnesses.set_vkeys(vkeyWitnesses);
 
-        
-        console.log("here !!")
-        console.log(txBody)
+    
         const test = TransactionBody.from_bytes(base64ToBytes(txBody));
 
 

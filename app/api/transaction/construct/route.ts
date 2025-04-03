@@ -79,37 +79,6 @@ async function getTxUnspentOutputs(CardanoWasm: any, address: string): Promise<a
     return txOutputs;
 }
 
-async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<string> {
-    try {
-        const response = await fetch(`${KOIOS_API_URL}/submittx`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/cbor"
-            },
-            body: transactionBytes
-        });
-
-        if (!response.ok) {
-            // 🔹 Log full response details
-            const errorBody = await response.text();
-            console.error(`Error Response from Koios:`, {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorBody
-            });
-            throw new Error(`Failed to submit transaction: ${response.statusText} - ${errorBody}`);
-        }
-
-        const txHash = await response.text();
-        console.log("Transaction Submitted! TX Hash:", txHash);
-        return txHash;
-    } catch (error) {
-        console.error("Error submitting transaction:", error);
-        throw error;
-    }
-}
-
-
 export async function POST(req: NextRequest) {
     try {
         const CardanoWasm = await import("@emurgo/cardano-serialization-lib-browser");

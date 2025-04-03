@@ -1,6 +1,7 @@
 import Heimdall, { BaseTideRequest, CardanoTxBodySignRequest, CreateCardanoTxBodySignRequest } from "tidecloak-js"
 import kcData from "../tidecloak.json";
 import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
+import { InitCertResponse } from "./tidecloakApi";
 
 let _tc: typeof Heimdall | null = null;
 
@@ -181,7 +182,6 @@ export const signModel = async (dataToAuthorize: string, proof: string, vvkId: s
 }
 
 export const createTxDraft = (txBody: string) => {
-    console.log(txBody)
     const tidecloak = getKeycloakClient();
     if (!tidecloak) { return null; }
 
@@ -189,11 +189,24 @@ export const createTxDraft = (txBody: string) => {
 }
 
 export const signTxDraft = async (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
-    console.log(txBody)
     const tidecloak = getKeycloakClient();
     if (!tidecloak) { return null; }
 
     return await tidecloak.signCardanoTx(txBody, authorizers, ruleSettings, expiry);
+}
+
+export const createRuleSettingsDraft = (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => {
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+
+    return tidecloak.createRuleSettingsDraft(ruleSettings, previousRuleSetting, previousRuleSettingCert);
+}
+
+export const signRuleSettingsDraft = async (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+
+    return await tidecloak.signRuleSettings(ruleReq, authorizers, ruleSettings, expiry, initCert);
 }
 
 const IAMService = {
@@ -209,7 +222,9 @@ const IAMService = {
     hasRole,
     getVuid,
     createTxDraft,
-    signTxDraft
+    signTxDraft,
+    createRuleSettingsDraft,
+    signRuleSettingsDraft
 };
 
 export default IAMService;

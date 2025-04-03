@@ -1,5 +1,5 @@
-/* Vaultless Admin Dashboard */
-.vaultless-dashboard {
+/* app Admin Dashboard */
+.app-dashboard {
     background-color: #0a0a0c;
     color: #e0f7fa;
     font-family: 'Inter', 'Orbitron', monospace;
@@ -10,7 +10,7 @@
 }
 
 /* Card Styling */
-.vaultless-dashboard .card {
+.app-dashboard .card {
     background-color: #131417;
     border: 1px solid rgba(77, 168, 218, 0.2);
     box-shadow: 0 0 10px rgba(77, 168, 218, 0.3);
@@ -22,24 +22,24 @@
 }
 
 /* Full width settings panel */
-.vaultless-dashboard .card {
+.app-dashboard .card {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
-.vaultless-dashboard button {
+.app-dashboard button {
     transition: all 0.3s ease;
     border-radius: 8px;
 }
 
-.vaultless-dashboard button:hover {
+.app-dashboard button:hover {
     filter: drop-shadow(0 0 5px #4da8da);
     background-color: #1b2a41;
 }
 
 /* Sidebar Styling */
-.vaultless-dashboard .sidebar {
+.app-dashboard .sidebar {
     background-color: #111827;
     border-right: 1px solid #1f2937;
     padding: 1rem;
@@ -47,7 +47,7 @@
     /* Adjust sidebar width */
 }
 
-.vaultless-dashboard .sidebar button {
+.app-dashboard .sidebar button {
     background: none;
     color: #e0f7fa;
     padding: 0.75rem;
@@ -55,22 +55,22 @@
     text-align: left;
 }
 
-.vaultless-dashboard .sidebar button.active,
-.vaultless-dashboard .sidebar button:hover {
+.app-dashboard .sidebar button.active,
+.app-dashboard .sidebar button:hover {
     background-color: #1f2937;
     color: #4da8da;
 }
 
 /* Title */
-.vaultless-dashboard h1,
-.vaultless-dashboard h2,
-.vaultless-dashboard h3 {
+.app-dashboard h1,
+.app-dashboard h2,
+.app-dashboard h3 {
     color: #4da8da;
     letter-spacing: 0.05em;
 }
 
 /* Settings Panel Full Width */
-.vaultless-dashboard .settings-panel {
+.app-dashboard .settings-panel {
     width: calc(100% - 250px);
     /* Full width of the content excluding sidebar */
     padding: 2rem;
@@ -79,19 +79,19 @@
     justify-content: flex-start;
 }
 
-.vaultless-dashboard .settings-panel h3 {
+.app-dashboard .settings-panel h3 {
     font-size: 2rem;
     font-weight: 600;
     color: #fff;
     margin-bottom: 1rem;
 }
 
-.vaultless-dashboard .settings-panel p {
+.app-dashboard .settings-panel p {
     color: #b0b0b0;
 }
 
 /* Global Settings Button Styling */
-.vaultless-dashboard .settings-panel button {
+.app-dashboard .settings-panel button {
     background-color: #00fff7;
     color: #0a0a0c;
     width: 100%;
@@ -102,7 +102,7 @@
     margin-bottom: 1rem;
 }
 
-.vaultless-dashboard .settings-panel button:hover {
+.app-dashboard .settings-panel button:hover {
     background-color: #0086aa;
     box-shadow: 0 0 10px #00fff7;
 }

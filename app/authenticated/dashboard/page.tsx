@@ -141,7 +141,7 @@ export default function Dashboard() {
     });
     if (!resp.ok) throw new Error("Failed to fetch uri");
     const data = await resp.json();
-    const date = new Date(draft.creationTimestamp);
+    const date = new Date(draft.expiry);
     const expiry = (Math.floor(date.getTime() / 1000) + 7 * 24 * 60 * 60).toString();
     const heimdall = new Heimdall(data.uri, [vuid]);
     await heimdall.openEnclave();

@@ -25,18 +25,18 @@ export default function WalletInfo({
     return (
         <div className="space-y-6">
             {/* Wallet Address */}
-            <div className="vaultless-card text-center">
+            <div className="app-card text-center">
                 <h2 className="text-lg font-semibold text-white mb-3">Wallet Address</h2>
                 {isWalletLoading ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="vaultless-spinner" />
+                        <div className="app-spinner" />
                     </div>
                 ) : (
-                    <div className="vaultless-wallet-address flex items-center justify-between">
+                    <div className="app-wallet-address flex items-center justify-between">
                         <span className="wallet-address-text truncate">{walletAddress}</span>
                         <button
                             onClick={handleCopy}
-                            className="vaultless-button copy-button"
+                            className="app-button copy-button"
                         >
                             {copied ? "Copied!" : "Copy"} <FaCopy />
                         </button>
@@ -45,11 +45,11 @@ export default function WalletInfo({
             </div>
 
             {/* Wallet Balance */}
-            <div className="vaultless-card text-center vaultless-available-balance">
+            <div className="app-card text-center app-available-balance">
                 <h2 className="text-lg font-semibold text-white mb-3">Available Balance</h2>
                 {isBalanceLoading ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="vaultless-spinner" />
+                        <div className="app-spinner" />
                     </div>
                 ) : (
                     <p className="text-5xl font-extrabold text-white">{walletBalance}</p>
@@ -57,11 +57,11 @@ export default function WalletInfo({
             </div>
 
             {/* Send Button */}
-            <div className="vaultless-card text-center">
+            <div className="app-card text-center">
                 <h2 className="text-lg font-semibold text-white mb-3">Send Cardano</h2>
                 <button
                     onClick={onSend}
-                    className="vaultless-button w-full py-4 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    className="app-button w-full py-4 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                     SEND ADA
                 </button>

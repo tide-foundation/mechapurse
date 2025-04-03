@@ -9,12 +9,6 @@ import {
 import { ImSpinner8 } from "react-icons/im";
 import { Heimdall } from "../../../../tide-modules/modules/heimdall.js";
 import { useAuth } from "@/components/AuthContext";
-import { createAuthorization } from "@/lib/tidecloakApi.js";
-import {
-  AddAdminAuthorization,
-  AddDraftSignRequest,
-  DeleteDraftSignRequest,
-} from "@/lib/db";
 import { DraftSignRequest } from "@/interfaces/interface.js";
 
 export default function Send() {
@@ -124,17 +118,11 @@ export default function Send() {
 
       const draftReq = await addDraftRequest(txbody, draft, data.draftJson);
 
-      const date = new Date(draftReq.creationTimestamp);
-      const expiry = (
-        Math.floor(date.getTime() / 1000) +
-        7 * 24 * 60 * 60
-      ).toString(); // 1 week later
-
       await heimdall.openEnclave();
       const authApproval = await heimdall.getAuthorizerApproval(
         draft,
         "CardanoTx:1",
-        expiry,
+        draftReq.expiry,
         "base64"
       );
 
@@ -152,7 +140,7 @@ export default function Send() {
           txbody,
           [data.authorization],
           data.ruleSettings,
-          expiry
+          draftReq.expiry,
         );
 
         const response = await fetch("/api/transaction/send", {
@@ -177,7 +165,7 @@ export default function Send() {
 
   return (
     <main className="send-container">
-      <div className="vaultless-send-card">
+      <div className="app-send-card">
         <div className="send-card-header">
           <FaPaperPlane />
           <span>Send ADA</span>

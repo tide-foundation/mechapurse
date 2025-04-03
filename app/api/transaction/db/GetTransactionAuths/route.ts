@@ -9,7 +9,7 @@ import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
 import { createApprovalURI, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
 import { routeRoleMapping } from "@/lib/authConfig";
-import { AddAdminAuthorization, AddDraftSignRequest, GetAllDraftSignRequests, GetDraftSignRequest, GetDraftSignRequestAuthorizations } from "@/lib/db";
+import { AddAuthorization, AddDraftSignRequest, GetAllDraftSignRequests, GetDraftSignRequest, GetDraftSignRequestAuthorizations } from "@/lib/db";
 import { AdminAuthorizationPack } from "@/interfaces/interface";
 
 const allowedRoles = [Roles.User, Roles.Admin];

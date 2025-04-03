@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import IAMService from "@/lib/IAMService";
+import { InitCertResponse } from "@/lib/tidecloakApi";
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -10,6 +11,8 @@ interface AuthContextType {
     vuid: string;
     createTxDraft: (txBody: string) => string;
     signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
+    createRuleSettingsDraft: (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => string;
+    signRuleSettingsDraft: (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => Promise<string>;
 
 }
 
@@ -46,9 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return IAMService.signTxDraft(txBody, authorizers, ruleSettings, expiry);
     }
 
+    const createRuleSettingsDraft = (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => {
+        return IAMService.createRuleSettingsDraft(ruleSettings, previousRuleSetting, previousRuleSettingCert);
+    }
+
+
+    const signRuleSettingsDraft = (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
+        return IAMService.signRuleSettingsDraft(ruleReq, authorizers, ruleSettings, expiry, initCert);
+    }
+
+
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft  }}>
             {children}
         </AuthContext.Provider>
     );

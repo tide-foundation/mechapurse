@@ -57,4 +57,5 @@ declare module "tidecloak-js" {
     export function StringFromUint8Array(data: Uint8Array): string;
     export function base64ToBytes(data: string): Uint8Array;
     export function bytesToBase64(data: Uint8Array): string;
+    export function getHumanReadableObject(modelId: string, data: any, expiry: string);
 }
