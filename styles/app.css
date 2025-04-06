@@ -1,14 +1,120 @@
-/* Main Dashboard Styling */
+/* Import Orbitron for a futuristic feel */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+/* ============================= */
+/* Navigation & Header Styles    */
+/* ============================= */
+
+/* Header Styles */
+.app-header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background-color: #ffffff;
+    border-bottom: 1px solid #E0E0E0;
+    z-index: 1000;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Logo & Title */
+.logo-title {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.logo-title img {
+    width: 40px;
+    height: 40px;
+    margin-right: 0.5rem;
+}
+
+.logo-title h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #333333;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.3s ease;
+}
+
+.logo-title:hover h1 {
+    color: #D32F2F;
+    /* Bold red accent */
+}
+
+/* Navigation */
+.header-nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-button {
+    background: transparent;
+    border: none;
+    color: #333333;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.nav-button:hover {
+    color: #1976D2;
+    /* Blue accent */
+}
+
+/* ============================= */
+/* Global & Layout Styles        */
+/* ============================= */
+
+
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    background-color: #f5f7fa;
+    /* Off-white background */
+    color: #1e293b;
+    /* Dark text */
+    min-height: 100vh;
+}
+
+/* Layout Container */
+.layout-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+
+}
+
+/* Main Dashboard */
 .app-dashboard {
-    background-color: #e5e7eb;
+    background-color: #f8f8f8;
     color: #1e293b;
     font-family: 'Orbitron', 'Inter', sans-serif;
-    min-height: 100vh;
-    padding: 2rem;
+    height: calc(100vh - 70px);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1.5rem;
+    margin-top: 70px;
 }
 
 /* Layout Wrapper for Cards */
@@ -17,6 +123,10 @@
     gap: 1.5rem;
     align-items: stretch;
 }
+
+/* ============================= */
+/* Card & Element Styles         */
+/* ============================= */
 
 /* Card Styling */
 .app-card {
@@ -41,7 +151,8 @@
 
 /* Card Buttons */
 .app-card button {
-    background-color: #1e3a8a;
+    background-color: #D32F2F;
+    /* Bold red accent */
     color: #ffffff;
     font-weight: 600;
     border-radius: 0.5rem;
@@ -52,8 +163,9 @@
 }
 
 .app-card button:hover {
-    background-color: #1e40af;
-    box-shadow: 0 0 10px rgba(30, 58, 138, 0.1);
+    background-color: #1976D2;
+    /* Vivid blue on hover */
+    box-shadow: 0 0 10px rgba(25, 118, 210, 0.1);
 }
 
 /* Wallet Address Styling */
@@ -79,7 +191,7 @@
 
 /* Copy Button */
 .copy-button {
-    background-color: #1e3a8a;
+    background-color: #D32F2F;
     color: #ffffff;
     font-size: 0.875rem;
     padding: 0.25rem 0.75rem;
@@ -95,7 +207,7 @@
 }
 
 .copy-button:hover {
-    background-color: #1e40af;
+    background-color: #1976D2;
 }
 
 /* Available Balance Section */
@@ -122,8 +234,7 @@
 }
 
 /* Transaction Container */
-.app-transactions-container,
-.app-pending-container {
+.app-transactions-container {
     background-color: #ffffff;
     color: #1e293b;
     padding: 1.5rem;
@@ -134,8 +245,31 @@
     flex-direction: column;
     justify-content: space-between;
     flex: 1;
-    min-height: 220px;
+    min-height: 120px;
     margin-bottom: 1rem;
+}
+
+.app-pending-container {
+    background-color: #ffffff;
+    color: #1e293b;
+    padding: 2.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+
+}
+
+.app-scroll-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    height: 100%;
 }
 
 /* Transaction Row */
@@ -164,7 +298,7 @@
 .app-spinner {
     height: 3rem;
     width: 3rem;
-    border: 4px solid #1e3a8a;
+    border: 4px solid #D32F2F;
     border-top-color: transparent;
     border-radius: 9999px;
     animation: spin 1s linear infinite;
@@ -196,17 +330,24 @@
     border: 1px solid #cbd5e1;
     padding: 1rem;
     border-radius: 0.75rem;
+    /* Using flex for vertical stacking */
     display: flex;
     flex-direction: column;
     color: #1e293b;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin: 0 0.5rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
 }
 
 /* Review Button */
 .app-review-button {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
     margin: auto;
     padding: 0.5rem 1rem;
-    background-color: #1e3a8a;
+    background-color: #D32F2F;
     color: #ffffff;
     font-weight: bold;
     border-radius: 0.75rem;
@@ -215,7 +356,7 @@
 }
 
 .app-review-button:hover {
-    background-color: #1e40af;
+    background-color: #1976D2;
 }
 
 /* Send Container */
@@ -281,15 +422,15 @@
 
 .input-field:focus {
     outline: none;
-    border-color: #1e3a8a;
-    box-shadow: 0 0 5px rgba(30, 58, 138, 0.2);
+    border-color: #D32F2F;
+    box-shadow: 0 0 5px rgba(211, 47, 47, 0.2);
 }
 
 /* Submit Button */
 .submit-button {
     width: 100%;
     padding: 1rem;
-    background-color: #1e3a8a;
+    background-color: #D32F2F;
     color: #ffffff;
     font-weight: bold;
     border-radius: 1rem;
@@ -307,8 +448,8 @@
 }
 
 .submit-button:hover {
-    background-color: #1e40af;
-    box-shadow: 0 0 10px rgba(30, 58, 138, 0.1);
+    background-color: #1976D2;
+    box-shadow: 0 0 10px rgba(25, 118, 210, 0.1);
 }
 
 .submit-button:disabled {
@@ -363,14 +504,11 @@
     color: #1e293b;
 }
 
-/* Global Styles */
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', sans-serif;
-    background-color: #f5f7fa;
-    color: #1e293b;
-}
+/* ============================= */
+/* Admin Panel & Miscellaneous   */
+/* ============================= */
+
+
 
 /* Admin Panel Layout */
 .admin-layout {
@@ -454,24 +592,6 @@ body {
     border: 1px solid #e2e8f0;
 }
 
-/* Buttons – Review and Scroll Buttons */
-.app-review-button {
-    background-color: #1e3a8a;
-    color: #ffffff;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 600;
-    display: inline-block;
-    margin-top: 1rem;
-}
-
-.app-review-button:hover {
-    background-color: #1e40af;
-}
-
 /* Container for aligning buttons to the right if needed */
 .button-container {
     display: flex;
@@ -493,15 +613,6 @@ body {
     color: #1e3a8a;
 }
 
-/* Draft Card for Rules and other sections */
-.app-draft-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-}
 
 /* Modal Overlay – Centered */
 .modal-overlay {
@@ -552,6 +663,11 @@ body {
     border-color: #1e3a8a;
 }
 
+/* Logo Outline */
+.logoOutline {
+    filter: drop-shadow(0 0 4px #c2c1c1);
+}
+
 /* Responsive Layout Adjustments */
 @media (max-width: 768px) {
     .admin-layout {
@@ -567,8 +683,4 @@ body {
     .admin-content {
         padding: 1rem;
     }
-}.logoOutline {
-    /* Apply a drop-shadow to create an outline effect that follows the shape of the transparent PNG */
-    filter: drop-shadow(0 0 4px #c2c1c1);
-  }
-  
+}

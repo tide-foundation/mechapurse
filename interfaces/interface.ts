@@ -1,4 +1,25 @@
 // --- Interfaces ---
+export interface ChangeRequest {
+    id: string;
+    type: "user" | "rules";
+    description: string;
+    requestedBy: string;
+    date: string;
+    // For user change requests:
+    userRecord?: UserChangeRecord[];
+    // For rules change requests, additional properties (e.g. newData or validationSettings) are expected.
+    status?: string;
+    role?: string;
+    details?: string;
+    [key: string]: any;
+}
+
+export interface UserChangeRecord {
+    username: string;
+    clientId: string;
+    proofDetailId: string;
+    accessDraft: string;
+}
 
 
 export interface DraftSignRequest {
@@ -21,6 +42,11 @@ export interface User {
     name: string;
     email: string;
     role: string[];
+}
+
+export interface UserUpdate extends User {
+    rolesToAdd?: string[];
+    rolesToRemove?: string[];
 }
 
 export interface Role {

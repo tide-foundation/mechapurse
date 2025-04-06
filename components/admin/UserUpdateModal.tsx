@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "@/styles/AdminDashboard.module.css";
+import { UserUpdate } from "@/interfaces/interface";
 
 interface User {
   id: string;
@@ -16,22 +17,27 @@ interface Role {
   description?: string;
 }
 
-interface UserModalProps {
+interface UserUpdateModalProps {
   user: User;
   roles: Role[]; // List of all available roles.
   onClose: () => void;
-  onSave: (updatedUser: Partial<User>) => void | Promise<void>;
+  onUpdate: (updatedUser: Partial<UserUpdate>) => void | Promise<void>;
 }
 
-const UserModal = ({ user, roles, onClose, onSave }: UserModalProps) => {
+const UserUpdateModal = ({
+  user,
+  roles,
+  onClose,
+  onUpdate,
+}: UserUpdateModalProps) => {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  // Ensure role is always an array
-  const initialAssignedRoles = Array.isArray(user.role)
+  // Save the initial roles for later comparison.
+  const initialAssignedRoles: string[] = Array.isArray(user.role)
     ? user.role
     : user.role
-    ? [user.role]
-    : [];
+      ? [user.role]
+      : [];
   const [assignedRoles, setAssignedRoles] = useState<string[]>(initialAssignedRoles);
   const [copyStatus, setCopyStatus] = useState<string>("");
 
@@ -52,13 +58,19 @@ const UserModal = ({ user, roles, onClose, onSave }: UserModalProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ name, email, role: assignedRoles });
+
+    // Determine which roles to add and which to remove.
+    const rolesToAdd = assignedRoles.filter(role => !initialAssignedRoles.includes(role));
+    const rolesToRemove = initialAssignedRoles.filter(role => !assignedRoles.includes(role));
+
+    // Pass back updated details along with roles to add and remove, including the original id.
+    onUpdate({ id: user.id, name, email, role: assignedRoles, rolesToAdd, rolesToRemove });
   };
 
   // Generate the invite URL based on the user id.
   const linkUrl = `https://tide-wallet.io/link?userId=${user.id}`;
 
-  // Copy link function without preview.
+  // Copy link function without URL preview.
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(linkUrl);
@@ -74,10 +86,10 @@ const UserModal = ({ user, roles, onClose, onSave }: UserModalProps) => {
       className={styles.modalOverlay}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="userModalTitle"
+      aria-labelledby="userUpdateModalTitle"
     >
       <div className={`${styles.appCard} ${styles.userModalCard}`}>
-        <h3 id="userModalTitle" className={styles.modalTitle}>
+        <h3 id="userUpdateModalTitle" className={styles.modalTitle}>
           Edit User
         </h3>
         <p className={styles.modalSubtitle}>
@@ -164,7 +176,7 @@ const UserModal = ({ user, roles, onClose, onSave }: UserModalProps) => {
             </div>
           </div>
 
-          {/* Link Tide Account Section without URL preview */}
+          {/* Link Tide Account Section */}
           <div className={styles.inputGroup}>
             <label className={styles.label}>Link Tide Account</label>
             <div className={styles.copyLinkContainer}>
@@ -193,4 +205,4 @@ const UserModal = ({ user, roles, onClose, onSave }: UserModalProps) => {
   );
 };
 
-export default UserModal;
+export default UserUpdateModal;

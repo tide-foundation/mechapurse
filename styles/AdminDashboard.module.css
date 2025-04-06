@@ -1,8 +1,87 @@
+.counter {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  /* centers text vertically */
+  text-align: center;
+  background-color: #1976D2;
+  /* Accent color */
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+  /* Prevents it from being squished */
+}
+
+/* Review Button: Primary action (red) */
+.reviewButton {
+  background-color: #D32F2F;
+  /* Red */
+  color: #FFFFFF;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.reviewButton:hover:not(:disabled) {
+  background-color: #1976D2;
+  /* Blue on hover */
+}
+
+/* Commit Button: Emphasizes commit action with blue */
+.commitButton {
+  background-color: #1976D2;
+  /* Blue */
+  color: #FFFFFF;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.commitButton:hover:not(:disabled) {
+  background-color: #1565C0;
+  /* Slightly darker blue */
+}
+
+/* Cancel Button: Uses a neutral off-white/grey tone */
+.cancelButton {
+  background-color: #F9F9F9;
+  /* Off-white */
+  color: #333333;
+  /* Dark grey text */
+  border: 1px solid #CCCCCC;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #E0E0E0;
+  border-color: #B0B0B0;
+}
+
+/* Disabled state for any button */
+button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* Layout & General Styles */
 .adminLayout {
   display: flex;
   height: 100vh;
   font-family: Arial, sans-serif;
+  width: 100vw;
 }
 
 /* Sidebar */
@@ -21,12 +100,12 @@
 .sidebarButton {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: none;
-  color: inherit;
+  justify-content: space-between;
   width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: inherit;
   text-align: left;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -35,7 +114,32 @@
 
 .sidebarButton:hover,
 .active {
+  width: 100%;
+
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Content wrapper inside the sidebar button */
+.sidebarButtonContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: nowrap;
+  /* Prevent wrapping */
+}
+
+
+/* Icon and text styling */
+.iconContainer {
+  display: flex;
+  align-items: center;
+}
+
+.sidebarText {
+  flex: 1;
+  margin-left: 0.5rem;
+  white-space: nowrap;
 }
 
 /* Main Content */
@@ -109,7 +213,8 @@
 }
 
 .expanded {
-  max-height: 1000px; /* adjust as needed */
+  max-height: 1000px;
+  /* adjust as needed */
   opacity: 1;
 }
 
@@ -411,6 +516,7 @@
     padding: 1rem;
   }
 }
+
 .quickViewChangeRequestCard {
   display: flex;
   flex-direction: row;
@@ -463,7 +569,8 @@
 
 /* Updated User Modal Card */
 .userModalCard {
-  max-width: 700px; /* Increased width for better layout */
+  max-width: 700px;
+  /* Increased width for better layout */
 }
 
 /* New Styles for Dual-Panel Role Management */

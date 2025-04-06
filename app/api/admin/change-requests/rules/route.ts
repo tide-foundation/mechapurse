@@ -27,12 +27,10 @@ export async function GET(req: NextRequest) {
 
         // Get the rules container that matches your RuleSettings interface.
         const settings = (await GetRuleSettingsDraft());
-        if ( settings === null) {
+        if (settings === null) {
             return NextResponse.json({});
         }
-        console.log(settings);
         const humanReadableObj = settings.map(setting => {
-            console.log(setting.ruleReqDraft)
             return { ...getHumanReadableObject("Rules:1", base64ToBytes(setting.ruleReqDraft), setting.expiry).NewRuleSetting, expiry: setting.expiry };
         })
         return NextResponse.json(humanReadableObj);
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
         }
 
 
-        return NextResponse.json({ });
+        return NextResponse.json({});
     } catch (error) {
         console.error("Error saving global rules:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -24,24 +24,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 })
         }
 
-        const {ruleDraft, authorizations, expiry, newSetting} = await req.json();
-
-        console.log({ruleDraft, authorizations, expiry})
-        
-        // get threshold
-
-        // call signRules if meet threshold
-
-        // else just add to db
-        // console.log(settings)
-        // // Save and sign the rules (rules should be an array of RuleDefinition objects)
+        const { ruleDraft, authorizations, expiry, newSetting } = await req.json();
         const res = await saveAndSignRules(ruleDraft, expiry, authorizations, token, newSetting);
 
         await AddRuleConfiguration(newSetting, res)
-        
-        // await AddRuleConfiguration(JSON.stringify(realmKeysConfig.rules), realmKeysConfig.rulesCert);
-
-        return NextResponse.json({message: "SUCCESS!!!" });
+        return NextResponse.json({ message: "SUCCESS!!!" });
     } catch (error) {
         console.error("Error saving global rules:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

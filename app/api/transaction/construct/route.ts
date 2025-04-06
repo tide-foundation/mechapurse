@@ -125,9 +125,6 @@ export async function POST(req: NextRequest) {
             CardanoWasm.Credential.from_keyhash(publicKeyHash)
         );
         const enterpriseAddressBech32 = enterpriseAddress.to_address().to_bech32();
-
-        console.log("Sender Enterprise Address:", enterpriseAddressBech32);
-
         const txUnspentOutputs = await getTxUnspentOutputs(CardanoWasm, enterpriseAddressBech32);
         const txBuilder = await createTransactionBuilder();
 
@@ -151,9 +148,6 @@ export async function POST(req: NextRequest) {
         // Ensure enough input is selected to cover outputs and fees
         txBuilder.add_change_if_needed(enterpriseAddress.to_address());
 
-        console.log("Change Address:", enterpriseAddress.to_address().to_bech32());
-
-
         // 1 slot = 1 second
         const currentSlot = await getCurrentSlotNumber(CardanoWasm);
         const slotBuffer = CardanoWasm.BigNum.from_str("7200"); // 1-hour slot buffer
@@ -162,7 +156,6 @@ export async function POST(req: NextRequest) {
 
         // Build transaction and return hex
         const txBody = txBuilder.build()
-        console.log(txBody.to_json())
         const txBase64 = bytesToBase64(txBody.to_bytes());
 
         const approvalUri = await createApprovalURI(token);

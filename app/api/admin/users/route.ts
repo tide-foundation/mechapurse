@@ -33,11 +33,10 @@ export async function GET(req: NextRequest) {
 
     const users: User[] = await Promise.all(allUsers.map(async (u) => {
         const userRoles = await GetUserRoleMappings(u.id!, token);
-        console.log(userRoles)
-        const userClientRoles = userRoles.clientMappings 
-        ? Object.values(userRoles.clientMappings).flatMap(m => m.mappings?.map(role => role.name!) || [])
-        : [];
-        
+        const userClientRoles = userRoles.clientMappings
+            ? Object.values(userRoles.clientMappings).flatMap(m => m.mappings?.map(role => role.name!) || [])
+            : [];
+
         return {
             id: u.id ?? "",
             name: u.firstName ?? "",
@@ -64,12 +63,12 @@ export async function POST(req: NextRequest) {
         }
 
         // Parse query parameters
-        const { id, name, email, role } = await req.json();
+        const { id, name, email, rolesToAdd, rolesToRemove } = await req.json();
 
-        role.forEach(async (r: Role) => {
-            await GrantUserRole(id, r.name, token);
+        rolesToAdd.forEach(async (r: string) => {
+            await GrantUserRole(id, r, token);
         })
-        return NextResponse.json({message: "Change Request added for this user role assignment."});
+        return NextResponse.json({ message: "Change Request added for this user role assignment." });
     } catch (error) {
         return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
@@ -97,7 +96,7 @@ export async function PUT(req: NextRequest) {
         role.forEach(async (r: Role) => {
             await GrantUserRole(id, r.name, token);
         })
-        return NextResponse.json({message: "Change Request added for this user role assignment."});
+        return NextResponse.json({ message: "Change Request added for this user role assignment." });
     } catch (error) {
         return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }

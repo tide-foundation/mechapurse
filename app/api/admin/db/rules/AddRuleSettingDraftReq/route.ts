@@ -36,9 +36,8 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        console.log("booo" + draft)
         const draftReq = await AddRuleSettingsDraft(draft);
-  
+
         return NextResponse.json({ draftReq: draftReq });
     } catch (err) {
         console.error("Internal Server Error:", err);

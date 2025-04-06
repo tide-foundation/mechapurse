@@ -135,12 +135,6 @@ export async function POST(req: NextRequest) {
         if (!user) throw new Error("Invalid token");
 
         const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
-
-        // const test = await signTx(txBase64, "3b51f0fe-6feb-4129-af4c-6271a037a2f0", token);
-
-        // const txBodyBytes = Buffer.from(txBody, 'hex');
-        // const txHash = FixedTransaction.new_from_body_bytes(txBodyBytes);
-        // add keyhash witnesses
         const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
         const vKey = Vkey.new(publicKey);
 
@@ -151,7 +145,7 @@ export async function POST(req: NextRequest) {
         const witnesses = CardanoWasm.TransactionWitnessSet.new();
         witnesses.set_vkeys(vkeyWitnesses);
 
-    
+
         const test = TransactionBody.from_bytes(base64ToBytes(txBody));
 
 
@@ -161,15 +155,7 @@ export async function POST(req: NextRequest) {
             witnesses,
             undefined, // transaction metadata
         );
-
-        // console.log({ transaction: txBody.to_hex(), hash: txHash.transaction_hash().to_hex() })
-
-        // const approvalUri = await createApprovalURI(token);
-
         const result = await submitSignedTransaction(transaction.to_bytes());
-
-
-        // return NextResponse.json({ txHash: result });
         return NextResponse.json({ txHash: result });
     } catch (err) {
         console.error("Internal Server Error:", err);

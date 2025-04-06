@@ -20,22 +20,20 @@ export default function Home() {
     };
 
     return (
-        <main className="flex flex-col items-center justify-center min-h-screen px-6 py-12 w-full font-['Inter'] bg-gradient-to-b from-blue-900 to-blue-800">
-            <div className="w-full max-w-lg bg-gradient-to-b from-[#1E3A8A] to-[#233A73] rounded-xl p-8 shadow-lg border border-blue-700 text-white text-center">
-                {/* Wallet Logo */}
-                <h1 className="text-5xl font-bold mb-6">Tide Wallet</h1>
+        <main className="flex flex-col items-center justify-center min-h-screen px-6 py-12 w-full font-['Orbitron'] bg-[#EDEDED] bg-circuit-pattern">
+            <div className="w-full max-w-lg bg-[#F5F5F0]/90 text-[#404040] rounded-xl p-8 shadow-2xl border border-[#A0A0A0] text-center flex flex-col justify-center min-h-[300px]">
 
-                {/* Login Button */}
+                <h1 className="text-5xl font-bold !pb-6 text-[#2C2C2C] tracking-wider">MECHAPURSE</h1>
+
                 <button
                     onClick={handleLogin}
-                    className="w-full py-4 bg-[#2979FF] hover:bg-[#1E6AE1] text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    className="w-64 h-14 bg-[#D32F2F] hover:bg-[#A0A0A0] text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg self-center py-4"
                 >
-                    Login to Wallet
+                    Login
                 </button>
 
-                {/* Tagline */}
-                <p className="mt-6 text-blue-300 text-sm">
-                    Securely manage your Cardano assets.
+                <p className="!pt-10 text-[#8E8E8E] text-s">
+                    Keys That Never Exist - Security That Always Does.
                 </p>
             </div>
         </main>

@@ -38,9 +38,8 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        console.log(id)
         await AddAuthorization(id, vuid, authorization);
-  
+
         return NextResponse.json({ message: "Succesfully added admin auth" });
     } catch (err) {
         console.error("Internal Server Error:", err);

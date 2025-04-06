@@ -32,29 +32,31 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Navbar */}
-      <header className="bg-gradient-to-b from-[#0A0A0C] to-[#1A1C20] shadow-md p-4 text-white fixed w-full z-50 h-16 border-b border-[#4DA8DA33]">
-        <div className="container mx-auto flex justify-between items-center px-4">
-          {/* Logo and Title */}
+    <div
+      className="layout-container"
+      style={{
+        background: "url('/styles/img/background_circuit.svg') no-repeat center center",
+        backgroundSize: "cover",
+      }}
+    >
+      {/* Header */}
+      <header className="app-header">
+        <div className="header-content">
           <div
-            className="flex items-center cursor-pointer"
+            className="logo-title"
             onClick={() => router.push("/authenticated/dashboard")}
           >
-            <Image
+            {/* Uncomment below if you want to show the logo image */}
+            {/* <Image
               src={LogoImage}
-              alt="Logo"
+              alt="Mechapurse Logo"
               width={40}
               height={40}
-              className="logoOutline mr-2"
-            />
-            <h1 className="text-2xl font-bold hover:text-[#4DA8DA] transition-all tracking-wide uppercase">
-              MECHAPURSE
-            </h1>
+              className="logoOutline"
+            /> */}
+            <h1>MECHAPURSE</h1>
           </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-6 items-center">
+          <nav className="header-nav">
             {hasRole("tide-realm-admin", "realm-management") && (
               <NavButton
                 onClick={() => router.push("/authenticated/admin")}
@@ -83,9 +85,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </header>
 
       {/* Page Content */}
-      <main className="bg-[#e5e7eb] flex-1 h-[calc(100vh-4rem)] mt-16 overflow-hidden">
-        {children}
-      </main>
+      <main className="app-dashboard">{children}</main>
     </div>
   );
 }
@@ -101,12 +101,7 @@ const NavButton = ({
   text: string;
   large?: boolean;
 }) => (
-  <button
-    onClick={onClick}
-    className={`hover:text-[#4DA8DA] transition-all flex items-center space-x-2 ${
-      large ? "text-2xl justify-center" : ""
-    }`}
-  >
+  <button onClick={onClick} className={`nav-button ${large ? "large" : ""}`}>
     {icon} <span>{text}</span>
   </button>
 );

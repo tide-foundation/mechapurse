@@ -1,18 +1,17 @@
 "use client";
 
-import { JSX, useEffect, useState } from "react";
+import { JSX, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   FaCogs,
   FaTrash,
   FaPlus,
   FaEdit,
-  FaChevronRight,
   FaSave,
   FaUndo,
   FaListAlt,
 } from "react-icons/fa";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import {
   User,
   Role,
@@ -20,14 +19,22 @@ import {
   RuleSet,
   RuleDefinition,
   RuleCondition,
+  UserUpdate,
 } from "@/interfaces/interface";
 import styles from "@/styles/AdminDashboard.module.css";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
 import { useAuth } from "@/components/AuthContext";
 import { addRuleSettingDraftRequest, createAuthorization } from "@/app/utils/helperMethods";
 import { RuleSetCard } from "@/components/admin/RuleSetCard";
-import UserModal from "@/components/admin/UserModal";
+import UserUpdateModal from "@/components/admin/UserUpdateModal";
 import { ChangeSetRequest } from "@/lib/keycloakTypes";
+import { SignChangeSetRequest } from "@/lib/tidecloakApi";
+
+// External Components
+import CollapsibleSection from "@/components/admin/CollapsibileSection";
+import UserChangeRequestCard from "@/components/admin/UserChangeRequestCard";
+import RulesChangeRequestCard from "@/components/admin/RulesChangeRequestCard";
+import SimpleGlobalSettingsModal from "@/components/admin/SimpleGlobalSettingsModal";
 
 // --- Constants for Rule Creation ---
 const methods = [
@@ -36,6 +43,7 @@ const methods = [
   "BETWEEN",
   "EQUAL_TO",
   "TOTAL_LESS_THAN",
+  "TOTAL_MORE_THAN",
   "FILTER_OUT_VALUES_EQUAL_TO",
   "FILTER_OUT_VALUES_NOT_EQUAL_TO",
 ];
@@ -48,43 +56,10 @@ const fields = [
   "TTL",
 ];
 
-// Reserved key for the threshold (global) rules.
-const DEFAULT_THRESHOLD_KEY = "CardanoTx:1.BlindSig:1";
-
-// --- Helper Functions ---
-function safeParseJSON(data: any) {
-  if (typeof data === "string") {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return data;
-    }
-  }
-  return data;
-}
-
-/**
- * Returns a status badge element with background color based on the status.
- * DRAFT → grey, PENDING → orange, APPROVE → green.
- */
-function getStatusBadge(status: string) {
-  let backgroundColor = "#ccc"; // default for DRAFT
-  if (status === "PENDING") backgroundColor = "#ffa500";
-  else if (status === "APPROVE") backgroundColor = "#4caf50";
-  return (
-    <span
-      style={{
-        backgroundColor,
-        color: "#fff",
-        padding: "0.3rem 0.6rem",
-        borderRadius: "4px",
-        fontWeight: "bold",
-      }}
-    >
-      {status}
-    </span>
-  );
-}
+// Reserved key for the global threshold rules (advanced mode only)
+export const DEFAULT_THRESHOLD_KEY = "CardanoTx:1.BlindSig:1";
+// Display name for threshold rules
+const THRESHOLD_DISPLAY_KEY = "Threshold Rules (CardanoTx1.BlindSig:1)";
 
 // --- Modal Wrapper ---
 const ModalWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -96,35 +71,35 @@ const ModalWrapper = ({ children }: { children: React.ReactNode }) => {
   return createPortal(children, document.body);
 };
 
-// --- Collapsible Section Component ---
-interface CollapsibleSectionProps {
-  title: React.ReactNode;
-  expanded: boolean;
-  onToggle: () => void;
-  headerActions?: React.ReactNode;
-  children: React.ReactNode;
-}
-const CollapsibleSection = ({
-  title,
-  expanded,
-  onToggle,
-  headerActions,
-  children,
-}: CollapsibleSectionProps) => {
+// --- New Action Bar for Change Requests ---
+const ChangeRequestActionBar = ({
+  selectedCR,
+  onReview,
+  onCommit,
+  onCancel,
+}: {
+  selectedCR: ChangeRequest | null;
+  onReview: () => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}) => {
+  const status = selectedCR?.status || "";
+  const canReview = status === "DRAFT" || status === "PENDING";
+  const canCommit = status === "APPROVED";
   return (
-    <div className={styles.collapsibleSection}>
-      <div className={styles.sectionHeader}>
-        <div className={styles.sectionHeaderLeft}>
-          <button onClick={onToggle} className={styles.expandButton} title="Toggle Expand/Collapse">
-            <FaChevronRight className={expanded ? styles.iconRotated : ""} />
-          </button>
-          {typeof title === "string" ? <h3 className={styles.sectionTitle}>{title}</h3> : title}
-        </div>
-        {headerActions && headerActions}
-      </div>
-      <div className={`${styles.collapsibleContent} ${expanded ? styles.expanded : styles.collapsed}`}>
-        {children}
-      </div>
+    <div
+      className={styles.actionBar}
+      style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}
+    >
+      <button onClick={onReview} disabled={!selectedCR || !canReview} className={styles.reviewButton}>
+        Review
+      </button>
+      <button onClick={onCommit} disabled={!selectedCR || !canCommit} className={styles.commitButton}>
+        Commit
+      </button>
+      <button onClick={onCancel} disabled={!selectedCR} className={styles.cancelButton}>
+        Cancel
+      </button>
     </div>
   );
 };
@@ -136,11 +111,10 @@ interface ChangeRequest {
   description: string;
   requestedBy: string;
   date: string;
-  // For user change requests:
   userRecord?: UserChangeRecord[];
-  // For rules change requests, additional properties (e.g. newData or validationSettings) are expected.
   status?: string;
   role?: string;
+  details?: string;
   [key: string]: any;
 }
 
@@ -151,186 +125,22 @@ interface UserChangeRecord {
   accessDraft: string;
 }
 
-// --- Component: UserRecordCard ---
-// Renders one user record as a fixed detail card.
-const UserRecordCard = ({ record }: { record: UserChangeRecord }) => {
-  return (
-    <div
-      className={styles.userRecordCard}
-      style={{
-        border: "1px solid #ccc",
-        padding: "0.5rem",
-        marginBottom: "0.5rem",
-        borderRadius: "4px",
-      }}
-    >
-      <p style={{ margin: "0 0 0.3rem" }}><strong>Username:</strong> {record.username}</p>
-      <p style={{ margin: 0 }}><strong>Client ID:</strong> {record.clientId}</p>
-      <div
-        style={{
-          width: "100%",
-          height: "200px",
-          border: "1px solid #ccc",
-          padding: "0.5rem",
-          marginTop: "0.5rem",
-          backgroundColor: "#f6f8fa",
-          borderRadius: "4px",
-          overflowY: "auto",
-        }}
-      >
-        <pre style={{ fontSize: "0.9rem", whiteSpace: "pre-wrap", wordWrap: "break-word", margin: 0 }}>
-          {JSON.stringify(safeParseJSON(record.accessDraft), null, 2)}
-        </pre>
-      </div>
-    </div>
-  );
-};
-
-// --- Component: UserChangeRequestCard ---
-// Renders a user-type change request with a header row and a collapsible container
-// wrapping the list of user records.
-const UserChangeRequestCard = ({
-  changeRequest,
-  onProceed,
-}: {
-  changeRequest: ChangeRequest;
-  onProceed: () => void;
-}) => {
-  const records: UserChangeRecord[] = changeRequest.userRecord || [];
-  const [recordsExpanded, setRecordsExpanded] = useState(false);
-  return (
-    <div
-      className={styles.changeRequestCard}
-      style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}
-    >
-      {/* Header Row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <div>
-            <strong>Action:</strong> {changeRequest.action || "N/A"}
-          </div>
-          <div>
-            <strong>Status:</strong> {getStatusBadge(changeRequest.status || "DRAFT")}
-          </div>
-          <div>
-            <strong>Role:</strong> {changeRequest.role || "N/A"}
-          </div>
-        </div>
-        <div>
-          <button onClick={onProceed} className={styles.primaryButton}   style={{ width: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}
-          >
-            Review
-          </button>
-        </div>
-      </div>
-      {/* Collapsible Container for User Records */}
-      <CollapsibleSection
-        title={`User Records (${records.length})`}
-        expanded={recordsExpanded}
-        onToggle={() => setRecordsExpanded(!recordsExpanded)}
-      >
-        <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-          {records.map((record) => (
-            <UserRecordCard key={record.proofDetailId} record={record} />
-          ))}
-        </div>
-      </CollapsibleSection>
-    </div>
-  );
-};
 
 
-// --- Component: RulesChangeRequestCard ---
-// Renders a rules-type change request card with a similar design to Users.
-// It includes a header row with action, status, and role; a button to toggle the detail container;
-// and the detail container (collapsed by default) shows the new JSON details.
-const RulesChangeRequestCard = ({
-  changeRequest,
-  onProceed,
-}: {
-  changeRequest: ChangeRequest;
-  onProceed: () => void;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const newData = safeParseJSON(changeRequest.newData || changeRequest.validationSettings || {});
-  return (
-    <div className={styles.changeRequestCard} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
-      {/* Header Row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <div><strong>Action:</strong> {changeRequest.action || "N/A"}</div>
-          <div><strong>Status:</strong> {getStatusBadge(changeRequest.status || "DRAFT")}</div>
-          <div><strong>Role:</strong> {changeRequest.role || "N/A"}</div>
-        </div>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <button onClick={() => setExpanded(!expanded)} className={styles.secondaryButton}>
-            {expanded ? "Hide Details" : "Show Details"}
-          </button>
-          <button onClick={onProceed} className={styles.primaryButton}  style={{ width: "150px", display: "flex", justifyContent: "center", alignItems: "center" }}
-          >
-            Review
-          </button>
-        </div>
-      </div>
-      {/* Collapsible Detail Container */}
-      <CollapsibleSection title="New JSON Details" expanded={expanded} onToggle={() => setExpanded(!expanded)}>
-        <div
-          style={{
-            width: "100%",
-            height: "250px",
-            border: "1px solid #ccc",
-            padding: "1rem",
-            backgroundColor: "#f6f8fa",
-            borderRadius: "4px",
-            overflowY: "auto",
-          }}
-        >
-          <pre style={{ fontSize: "0.9rem", whiteSpace: "pre-wrap", wordWrap: "break-word", margin: 0 }}>
-            {JSON.stringify(newData, null, 2)}
-          </pre>
-        </div>
-      </CollapsibleSection>
-    </div>
-  );
-};
-
-// --- Placeholder for External Review Popup ---
-const openExternalReviewPopup = (cr: ChangeRequest) => {
-  console.log("Opening external review popup for:", cr);
-  // Replace with your actual integration.
-};
-
+// --- Main AdminDashboard Component ---
 export default function AdminDashboard() {
   const { vuid, createRuleSettingsDraft, signRuleSettingsDraft } = useAuth();
+  const router = useRouter();
   const [view, setView] = useState("settings");
   const [activeTab, setActiveTab] = useState("user"); // "user" or "rules"
-
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [allRoles, setAllRoles] = useState<Role[]>([]);
-
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
-
-  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userUpdateModalOpen, setUserUpdateModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
-
+  const [userCreateModalOpen, setUserCreateModalOpen] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<RuleSettings>({
     id: "",
     validationSettings: { [DEFAULT_THRESHOLD_KEY]: [{ rules: [] }] },
@@ -342,9 +152,21 @@ export default function AdminDashboard() {
   const [isNewRuleSet, setIsNewRuleSet] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<{ [key: string]: boolean }>({});
-
   const [userChangeRequests, setUserChangeRequests] = useState<ChangeRequest[]>([]);
   const [rulesChangeRequests, setRulesChangeRequests] = useState<ChangeRequest[]>([]);
+  const [selectedChangeRequest, setSelectedChangeRequest] = useState<ChangeRequest | null>(null);
+  const totalChangeRequests = useMemo(
+    () => userChangeRequests.length + rulesChangeRequests.length,
+    [userChangeRequests.length, rulesChangeRequests.length]
+  );
+
+  // Toggle between Simple and Advanced modes.
+  const [useSimpleMode, setUseSimpleMode] = useState(true);
+
+  useEffect(() => {
+    fetchUserChangeRequests();
+    fetchRulesChangeRequests();
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -379,9 +201,9 @@ export default function AdminDashboard() {
       fetchUserChangeRequests();
       fetchRulesChangeRequests();
     }
+    setSelectedChangeRequest(null);
   }, [view]);
 
-  // --- API Calls ---
   const fetchUsers = async () => {
     try {
       const res = await fetch("/api/admin/users");
@@ -427,7 +249,6 @@ export default function AdminDashboard() {
         ) {
           data.validationSettings = {
             ...data.validationSettings,
-            [DEFAULT_THRESHOLD_KEY]: [{ rules: [] }],
           };
         }
         setGlobalSettings(data || { id: "", validationSettings: { [DEFAULT_THRESHOLD_KEY]: [{ rules: [] }] } });
@@ -449,7 +270,7 @@ export default function AdminDashboard() {
       const res = await fetch("/api/admin/change-requests/users");
       if (!res.ok) throw new Error("Failed to fetch user change requests");
       const data = await res.json();
-      setUserChangeRequests(data.settings);
+      setUserChangeRequests([...data.settings]);
     } catch (error) {
       console.error("Error fetching user change requests:", error);
     }
@@ -460,7 +281,7 @@ export default function AdminDashboard() {
       const res = await fetch("/api/admin/change-requests/rules");
       if (!res.ok) throw new Error("Failed to fetch rules change requests");
       const data = await res.json();
-      setRulesChangeRequests(data);
+      setRulesChangeRequests([...data]);
     } catch (error) {
       console.error("Error fetching rules change requests:", error);
     }
@@ -510,12 +331,12 @@ export default function AdminDashboard() {
       }
       setUnsavedChanges(false);
       fetchGlobalSettings();
+      await fetchRulesChangeRequests();
     } catch (error) {
       console.error("Error saving global settings:", error);
     }
   };
 
-  // --- Role CRUD ---
   const openAddRoleModal = () => {
     setRoleToEdit(null);
     setRoleModalOpen(true);
@@ -562,13 +383,12 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- User Editing ---
-  const openEditUserModal = (user: User) => {
+  const openEditUserUpdateModal = (user: User) => {
     setUserToEdit(user);
-    setUserModalOpen(true);
+    setUserUpdateModalOpen(true);
   };
 
-  const updateUser = async (user: User, updatedUser: Partial<User>) => {
+  const updateUser = async (user: User, updatedUser: Partial<UserUpdate>) => {
     try {
       if (user.name !== updatedUser.name || user.email !== updatedUser.email) {
         const res = await fetch(`/api/admin/users`, {
@@ -578,20 +398,34 @@ export default function AdminDashboard() {
         });
         if (!res.ok) throw new Error("Failed to update user");
       }
-      if (user.role !== updatedUser.role) {
+      if (user.role.length !== updatedUser.role?.length) {
         const res = await fetch(`/api/admin/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedUser),
         });
         if (!res.ok) throw new Error("Failed to update user");
+        await fetchUserChangeRequests();
       }
     } catch (error) {
       console.error("Error updating user:", error);
     }
   };
 
-  // --- Global Rules Modal Openers ---
+  const createUser = async (newUser: { username: string; firstName: string; lastName: string; email: string }) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      if (!res.ok) throw new Error("Failed to create user");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error creating user:", error);
+    }
+  };
+
   const openGlobalRulesForModal = (key: string, ruleSetIndex: number | null) => {
     setCurrentKey(key);
     setCurrentRuleSetIndex(ruleSetIndex);
@@ -610,6 +444,7 @@ export default function AdminDashboard() {
     }
   };
 
+  // Save a role-based rule set and update the corresponding threshold rule.
   const handleModalSave = (updatedRuleSet: RuleSet) => {
     if (globalSettingsType === "threshold") {
       const updatedValidationSettings = { ...globalSettings.validationSettings };
@@ -633,6 +468,21 @@ export default function AdminDashboard() {
         );
       }
       setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+
+      // Duplicate or update the corresponding threshold rule.
+      if (updatedRuleSet.outputs && updatedRuleSet.outputs.threshold) {
+        const thresholdRuleId = `threshold_rule_${currentKey}`;
+        const newThresholdRule = { ...updatedRuleSet, ruleSetId: thresholdRuleId };
+        let thresholdObj: RuleSet[] = globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY];
+        const existingIndex = thresholdObj.findIndex(r => r.ruleSetId === thresholdRuleId);
+        if (existingIndex !== -1) {
+          thresholdObj[existingIndex] = newThresholdRule;
+        } else {
+          thresholdObj.push(newThresholdRule);
+        }
+        updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = thresholdObj;
+        setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+      }
     }
     setUnsavedChanges(true);
     setGlobalModalOpen(false);
@@ -654,8 +504,78 @@ export default function AdminDashboard() {
     setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const reviewChangeRequest = (cr: ChangeRequest) => {
-    openExternalReviewPopup(cr);
+  const reviewChangeRequest = async (cr: ChangeRequest) => {
+    const changeRequest: ChangeSetRequest = {
+      changeSetId: cr.draftRecordId,
+      changeSetType: cr.changeSetType,
+      actionType: cr.actionType,
+    };
+    const response = await fetch("/api/admin/change-requests/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changeRequest),
+    });
+    const res = (await response.json()).response;
+    const heimdall = new Heimdall(res.customDomainUri, [vuid]);
+    await heimdall.openEnclave();
+    const authorizerApproval = await heimdall.getAuthorizerApproval(
+      res.changeSetRequests,
+      "UserContext:1",
+      res.expiry,
+      "base64url"
+    );
+    if (authorizerApproval.draft === res.changeSetRequests) {
+      if (authorizerApproval.accepted === false) {
+        await fetch("/api/admin/change-requests/addRejection", {
+          method: "POST",
+          body: JSON.stringify({ changeRequest: changeRequest }),
+        });
+      } else if (authorizerApproval.accepted === true) {
+        const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
+        await fetch("/api/admin/change-requests/addAuthorization", {
+          method: "POST",
+          body: JSON.stringify({
+            changeRequest: changeRequest,
+            authorizerApproval: authorizerApproval.data,
+            authorizerAuthentication: authorizerAuthentication,
+          }),
+        });
+      }
+    }
+    heimdall.closeEnclave();
+    await fetchUserChangeRequests();
+    await fetchRulesChangeRequests();
+    setSelectedChangeRequest(null);
+  };
+
+  const commitChangeRequest = async (cr: ChangeRequest) => {
+    const changeRequest: ChangeSetRequest = {
+      actionType: cr.actionType,
+      changeSetId: cr.draftRecordId,
+      changeSetType: cr.changeSetType,
+    };
+    await fetch("/api/admin/change-requests/commit", {
+      method: "POST",
+      body: JSON.stringify({ changeRequest: changeRequest }),
+    });
+    await fetchUserChangeRequests();
+    await fetchRulesChangeRequests();
+    setSelectedChangeRequest(null);
+  };
+
+  const cancelChangeRequest = async (cr: ChangeRequest) => {
+    const changeRequest: ChangeSetRequest = {
+      actionType: cr.actionType,
+      changeSetId: cr.draftRecordId,
+      changeSetType: cr.changeSetType,
+    };
+    await fetch("/api/admin/change-requests/cancel", {
+      method: "POST",
+      body: JSON.stringify({ changeRequest: changeRequest }),
+    });
+    await fetchUserChangeRequests();
+    await fetchRulesChangeRequests();
+    setSelectedChangeRequest(null);
   };
 
   return (
@@ -663,64 +583,56 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <aside className={styles.adminSidebar}>
         <h1 className={styles.sidebarTitle}>Admin Panel</h1>
-        <SidebarButton
-          active={view === "settings"}
-          onClick={() => navigateTo("settings")}
-          icon={<FaCogs />}
-          text="Global Settings"
-        />
-        <SidebarButton
-          active={view === "users"}
-          onClick={() => navigateTo("users")}
-          icon={<FaCogs />}
-          text="Manage Users"
-        />
-        <SidebarButton
-          active={view === "roles"}
-          onClick={() => navigateTo("roles")}
-          icon={<FaCogs />}
-          text="Manage Roles"
-        />
-        <SidebarButton
-          active={view === "changeRequests"}
-          onClick={() => navigateTo("changeRequests")}
-          icon={<FaListAlt />}
-          text="Change Requests"
-        />
+        <SidebarButton active={view === "settings"} onClick={() => navigateTo("settings")} icon={<FaCogs />} text="Global Settings" />
+        <SidebarButton active={view === "users"} onClick={() => navigateTo("users")} icon={<FaCogs />} text="Manage Users" />
+        <SidebarButton active={view === "roles"} onClick={() => navigateTo("roles")} icon={<FaCogs />} text="Manage Roles" />
+        <SidebarButton active={view === "changeRequests"} onClick={() => navigateTo("changeRequests")} icon={<FaListAlt />} text="Change Requests" badge={totalChangeRequests > 0 ? totalChangeRequests : undefined} />
       </aside>
 
       {/* Main Content */}
       <main className={styles.adminContent}>
         {view === "settings" && (
           <div className={styles.adminCard}>
-            <h2 className={styles.cardTitle}>Global Settings</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 className={styles.cardTitle}>Global Settings</h2>
+              <button onClick={() => setUseSimpleMode((prev) => !prev)} className={styles.secondaryButton}>
+                {useSimpleMode ? "Switch to Advanced Settings" : "Switch to Simple Settings"}
+              </button>
+            </div>
             <p className={styles.cardSubtitle}>
               Configure system-wide threshold and role-based validation rules.
             </p>
-            <CollapsibleSection
-              title={`Global Threshold (Key: ${DEFAULT_THRESHOLD_KEY})`}
-              expanded={!!expandedKeys[DEFAULT_THRESHOLD_KEY]}
-              onToggle={() => toggleKeyExpansion(DEFAULT_THRESHOLD_KEY)}
-              headerActions={
-                <button onClick={() => openGlobalRulesForModal(DEFAULT_THRESHOLD_KEY, null)} className={styles.primaryButton}>
-                  <FaPlus /> Add Rule Set
-                </button>
-              }
-            >
-              <div className={styles.ruleSetsList}>
-                {globalSettings.validationSettings &&
-                  globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY] &&
-                  globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY].map((ruleSet, index) => (
-                    <RuleSetCard
-                      key={index}
-                      ruleSet={ruleSet}
-                      index={index}
-                      onEdit={() => openGlobalRulesForModal(DEFAULT_THRESHOLD_KEY, index)}
-                      onDelete={() => handleRuleSetDelete(DEFAULT_THRESHOLD_KEY, index)}
-                    />
-                  ))}
-              </div>
-            </CollapsibleSection>
+            {/* In simple mode, hide the global threshold rules section */}
+            {!useSimpleMode && (
+              <CollapsibleSection
+                title={THRESHOLD_DISPLAY_KEY}
+                expanded={!!expandedKeys[DEFAULT_THRESHOLD_KEY]}
+                onToggle={() => toggleKeyExpansion(DEFAULT_THRESHOLD_KEY)}
+                headerActions={
+                  <button onClick={() => openGlobalRulesForModal(DEFAULT_THRESHOLD_KEY, null)} className={styles.primaryButton}>
+                    <FaPlus /> Add Rule Set
+                  </button>
+                }
+              >
+                <div className={styles.ruleSetsList}>
+                  {globalSettings.validationSettings &&
+                    globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY] &&
+                    globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY].map((ruleSet, index) => (
+                      <RuleSetCard
+                        key={index}
+                        ruleSet={ruleSet}
+                        index={index}
+                        onEdit={() => openGlobalRulesForModal(DEFAULT_THRESHOLD_KEY, index)}
+                        onDelete={() => handleRuleSetDelete(DEFAULT_THRESHOLD_KEY, index)}
+                      />
+                    ))}
+                </div>
+                <p style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: "0.95rem", marginTop: "1rem" }}>
+                  Note: Global threshold rules are not editable in simple mode.
+                  To enforce threshold approvals, please switch to advanced mode.
+                </p>
+              </CollapsibleSection>
+            )}
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Role-Based Validation Rules</h3>
               {roles.length > 0 ? (
@@ -777,7 +689,12 @@ export default function AdminDashboard() {
 
         {view === "users" && (
           <div className={styles.adminCard}>
-            <h2 className={styles.cardTitle}>Manage Users</h2>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.cardTitle}>Manage Users</h2>
+              <button onClick={() => setUserCreateModalOpen(true)} className={styles.primaryButton}>
+                <FaPlus /> Add User
+              </button>
+            </div>
             <p className={styles.cardSubtitle}>Review and manage user accounts.</p>
             <table className={styles.dataTable}>
               <thead>
@@ -789,7 +706,7 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} onClick={() => openEditUserModal(user)} style={{ cursor: "pointer" }}>
+                  <tr key={user.id} onClick={() => openEditUserUpdateModal(user)} style={{ cursor: "pointer" }}>
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>{Array.isArray(user.role) ? user.role.join(", ") : user.role}</td>
@@ -848,7 +765,6 @@ export default function AdminDashboard() {
           <div className={styles.adminCard}>
             <div className={styles.changeRequestsHeader} style={{ marginBottom: "1rem" }}>
               <h2 className={styles.cardTitle}>Change Requests</h2>
-              {/* Horizontal tab header (no icons) */}
               <div className={styles.pfTabs} style={{ display: "flex", borderBottom: "2px solid #e0e0e0" }}>
                 <button
                   onClick={() => setActiveTab("user")}
@@ -856,14 +772,14 @@ export default function AdminDashboard() {
                   style={{
                     flex: 1,
                     padding: "1rem",
-                    fontSize: "1.2rem",
+                    fontSize: "1.1rem",
                     border: "none",
                     borderBottom: activeTab === "user" ? "3px solid #007bba" : "3px solid transparent",
                     backgroundColor: activeTab === "user" ? "#e0f7ff" : "transparent",
                     cursor: "pointer",
                   }}
                 >
-                  Users ({userChangeRequests.length})
+                  Users {userChangeRequests.length > 0 && <span className={styles.counter}>{userChangeRequests.length}</span>}
                 </button>
                 <button
                   onClick={() => setActiveTab("rules")}
@@ -871,29 +787,45 @@ export default function AdminDashboard() {
                   style={{
                     flex: 1,
                     padding: "1rem",
-                    fontSize: "1.2rem",
+                    fontSize: "1.1rem",
                     border: "none",
                     borderBottom: activeTab === "rules" ? "3px solid #007bba" : "3px solid transparent",
                     backgroundColor: activeTab === "rules" ? "#e0f7ff" : "transparent",
                     cursor: "pointer",
                   }}
                 >
-                  Rules ({rulesChangeRequests.length})
+                  Rules {rulesChangeRequests.length > 0 && <span className={styles.counter}>{rulesChangeRequests.length}</span>}
                 </button>
               </div>
             </div>
+            <ChangeRequestActionBar
+              selectedCR={selectedChangeRequest}
+              onReview={async () => selectedChangeRequest && await reviewChangeRequest(selectedChangeRequest)}
+              onCommit={async () => selectedChangeRequest && await commitChangeRequest(selectedChangeRequest)}
+              onCancel={async () => selectedChangeRequest && await cancelChangeRequest(selectedChangeRequest)}
+            />
             <div className={styles.tabContent}>
               {activeTab === "user" ? (
                 userChangeRequests.length > 0 ? (
                   userChangeRequests.map((cr) => (
-                    <UserChangeRequestCard key={cr.id} changeRequest={cr} onProceed={() => reviewChangeRequest(cr)} />
+                    <UserChangeRequestCard
+                      key={cr.draftRecordId}
+                      changeRequest={cr}
+                      onSelect={() => setSelectedChangeRequest(cr)}
+                      selected={selectedChangeRequest?.draftRecordId === cr.draftRecordId}
+                    />
                   ))
                 ) : (
                   <p className={styles.emptyState}>No user change requests pending.</p>
                 )
               ) : rulesChangeRequests.length > 0 ? (
                 rulesChangeRequests.map((cr) => (
-                  <RulesChangeRequestCard key={cr.id} changeRequest={cr} onProceed={() => reviewChangeRequest(cr)} />
+                  <RulesChangeRequestCard
+                    key={cr.id}
+                    changeRequest={cr}
+                    onSelect={() => setSelectedChangeRequest(cr)}
+                    selected={selectedChangeRequest?.id === cr.id}
+                  />
                 ))
               ) : (
                 <p className={styles.emptyState}>No rules change requests pending.</p>
@@ -908,70 +840,109 @@ export default function AdminDashboard() {
           <RoleModal role={roleToEdit} onClose={() => setRoleModalOpen(false)} onSave={saveRole} />
         </ModalWrapper>
       )}
-      {userModalOpen && userToEdit && (
+      {userUpdateModalOpen && userToEdit && (
         <ModalWrapper>
-          <UserModal
+          <UserUpdateModal
             user={userToEdit}
             roles={allRoles}
-            onClose={() => setUserModalOpen(false)}
-            onSave={async (updatedUser: Partial<User>) => {
+            onClose={() => setUserUpdateModalOpen(false)}
+            onUpdate={async (updatedUser: Partial<UserUpdate>) => {
               await updateUser(userToEdit, updatedUser);
-              setUserModalOpen(false);
+              setUserUpdateModalOpen(false);
               fetchUsers();
+            }}
+          />
+        </ModalWrapper>
+      )}
+      {userCreateModalOpen && (
+        <ModalWrapper>
+          <UserCreateModal
+            onClose={() => setUserCreateModalOpen(false)}
+            onCreate={async (newUser) => {
+              await createUser(newUser);
+              setUserCreateModalOpen(false);
             }}
           />
         </ModalWrapper>
       )}
       {globalModalOpen && currentKey && (
         <ModalWrapper>
-          <GlobalSettingsModalForRole
-            roleKey={currentKey}
-            settings={
-              globalSettingsType === "threshold"
-                ? (globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY] &&
+          {useSimpleMode && currentKey !== DEFAULT_THRESHOLD_KEY ? (
+            <SimpleGlobalSettingsModal
+              roleKey={currentKey}
+              settings={
+                globalSettingsType === "threshold"
+                  ? (globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY] &&
                     (currentRuleSetIndex !== null
                       ? globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY][currentRuleSetIndex]
-                      : { rules: [] })) || { rules: [] }
-                : (globalSettings.validationSettings[currentKey] &&
+                      : { rules: [] })) ||
+                  { rules: [] }
+                  : (globalSettings.validationSettings[currentKey] &&
                     (currentRuleSetIndex !== null
                       ? globalSettings.validationSettings[currentKey][currentRuleSetIndex]
-                      : { rules: [] })) || { rules: [] }
-            }
-            onClose={() => {
-              setGlobalModalOpen(false);
-              setCurrentKey(null);
-              setCurrentRuleSetIndex(null);
-              setIsNewRuleSet(false);
-            }}
-            onSave={handleModalSave}
-            isThreshold={globalSettingsType === "threshold"}
-          />
+                      : { rules: [] })) ||
+                  { rules: [] }
+              }
+              onClose={() => {
+                setGlobalModalOpen(false);
+                setCurrentKey(null);
+                setCurrentRuleSetIndex(null);
+              }}
+              onSave={handleModalSave}
+              isThreshold={globalSettingsType === "threshold"}
+            />
+          ) : (
+            <GlobalSettingsModalForRole
+              roleKey={currentKey}
+              settings={
+                globalSettingsType === "threshold"
+                  ? (globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY] &&
+                    (currentRuleSetIndex !== null
+                      ? globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY][currentRuleSetIndex]
+                      : { rules: [] })) ||
+                  { rules: [] }
+                  : (globalSettings.validationSettings[currentKey] &&
+                    (currentRuleSetIndex !== null
+                      ? globalSettings.validationSettings[currentKey][currentRuleSetIndex]
+                      : { rules: [] })) ||
+                  { rules: [] }
+              }
+              onClose={() => {
+                setGlobalModalOpen(false);
+                setCurrentKey(null);
+                setCurrentRuleSetIndex(null);
+              }}
+              onSave={handleModalSave}
+              isThreshold={globalSettingsType === "threshold"}
+            />
+          )}
         </ModalWrapper>
       )}
     </div>
   );
 }
 
-/* --- Sidebar Button Component --- */
-const SidebarButton = ({
-  onClick,
-  icon,
-  text,
-  active,
-}: {
+// --- Sidebar Button Component ---
+interface SidebarButtonProps {
   onClick: () => void;
   icon: JSX.Element;
   text: string;
+  badge?: number;
   active?: boolean;
-}) => {
+}
+const SidebarButton = ({ onClick, icon, text, badge, active }: SidebarButtonProps) => {
   return (
     <button onClick={onClick} className={`${styles.sidebarButton} ${active ? styles.active : ""}`}>
-      {icon} <span>{text}</span>
+      <div className={styles.sidebarButtonContent}>
+        <div className={styles.iconContainer}>{icon}</div>
+        <div className={styles.sidebarText}>{text}</div>
+        {badge !== undefined && badge > 0 && <div className={styles.counter}>{badge}</div>}
+      </div>
     </button>
   );
 };
 
-/* --- Role Modal Component --- */
+// --- Role Modal Component ---
 const RoleModal = ({
   role,
   onClose,
@@ -993,15 +964,17 @@ const RoleModal = ({
   return (
     <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
       <div className={styles.appCard}>
-        <h3 id="roleModalTitle" className={styles.modalTitle}>
+        <h3 id="roleModalTitle" className={styles.modalTitle} style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1rem" }}>
           {role ? "Edit Role" : "Add New Role"}
         </h3>
-        <p className={styles.modalSubtitle}>
+        <p className={styles.modalSubtitle} style={{ fontSize: "1.1rem", marginBottom: "1.5rem" }}>
           Provide clear details so users know what permissions this role grants.
         </p>
         <form onSubmit={handleSubmit}>
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Role Name</label>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Role Name
+            </label>
             <input
               type="text"
               className={styles.inputField}
@@ -1009,29 +982,33 @@ const RoleModal = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Administrator"
               required
+              style={{ fontSize: "1.1rem", padding: "0.75rem" }}
             />
           </div>
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Description</label>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Description
+            </label>
             <textarea
               className={styles.inputField}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the role's responsibilities"
               rows={3}
+              style={{ fontSize: "1.1rem", padding: "0.75rem" }}
             />
           </div>
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
               <input type="checkbox" checked={isAuthorizer} onChange={(e) => setIsAuthorizer(e.target.checked)} />{" "}
               Is Authorizer Role?
             </label>
           </div>
-          <div className={styles.modalActions}>
-            <button type="button" onClick={onClose} className={styles.secondaryButton}>
+          <div className={styles.modalActions} style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem" }}>
+            <button type="button" onClick={onClose} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
               Cancel
             </button>
-            <button type="submit" className={styles.primaryButton}>
+            <button type="submit" className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
               Save Role
             </button>
           </div>
@@ -1041,7 +1018,7 @@ const RoleModal = ({
   );
 };
 
-/* --- Global Settings Modal for Role Component --- */
+// --- Global Settings Modal for Role Component ---
 interface GlobalSettingsModalForRoleProps {
   roleKey: string;
   settings: RuleSet;
@@ -1113,28 +1090,37 @@ const GlobalSettingsModalForRole = ({
   return (
     <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="globalRulesModalTitle">
       <div className={styles.appCardLarge}>
-        <h3 id="globalRulesModalTitle" className={styles.modalTitle}>
+        <h3 id="globalRulesModalTitle" className={styles.modalTitle} style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1rem" }}>
           Edit Global Rules for <strong>{roleKey}</strong>
         </h3>
-        <p className={styles.modalSubtitle}>Configure the rules that affect access for this key.</p>
+        <p className={styles.modalSubtitle} style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>
+          Configure the rules that affect access for this key.
+        </p>
         {isThreshold && (
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Required User Approvals</label>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Required User Approvals
+            </label>
             <input
               type="number"
               value={localRuleSet.outputs?.threshold || ""}
-              onChange={(e) => setLocalRuleSet({ ...localRuleSet, outputs: { threshold: Number(e.target.value) } })}
+              onChange={(e) =>
+                setLocalRuleSet({ ...localRuleSet, outputs: { threshold: Number(e.target.value) } })
+              }
               className={styles.inputField}
               placeholder="e.g., 3"
+              style={{ fontSize: "1.1rem", padding: "0.75rem" }}
             />
           </div>
         )}
         <div className={styles.rulesEditor}>
           {localRuleSet.rules.map((rule, index) => (
-            <div key={index} className={styles.ruleEditor}>
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>Field</label>
-                <select value={rule.field} onChange={(e) => updateRuleField(index, e.target.value)} className={styles.inputField}>
+            <div key={index} className={styles.ruleEditor} style={{ marginBottom: "1.5rem", padding: "1rem", border: "1px solid #e0e0e0", borderRadius: "6px", background: "#fafafa" }}>
+              <div className={styles.inputGroup} style={{ marginBottom: "1rem" }}>
+                <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Field
+                </label>
+                <select value={rule.field} onChange={(e) => updateRuleField(index, e.target.value)} className={styles.inputField} style={{ fontSize: "1.1rem", padding: "0.75rem" }}>
                   {fields.map((f) => (
                     <option key={f} value={f}>
                       {f}
@@ -1143,10 +1129,17 @@ const GlobalSettingsModalForRole = ({
                 </select>
               </div>
               {rule.conditions.map((condition, condIndex) => (
-                <div key={condIndex} className={styles.conditionEditor}>
-                  <div className={styles.inputGroup}>
-                    <label className={styles.label}>Method</label>
-                    <select value={condition.method} onChange={(e) => updateConditionField(index, condIndex, "method", e.target.value)} className={styles.inputField}>
+                <div key={condIndex} className={styles.conditionEditor} style={{ marginBottom: "1rem" }}>
+                  <div className={styles.inputGroup} style={{ marginBottom: "0.75rem" }}>
+                    <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                      Method
+                    </label>
+                    <select
+                      value={condition.method}
+                      onChange={(e) => updateConditionField(index, condIndex, "method", e.target.value)}
+                      className={styles.inputField}
+                      style={{ fontSize: "1.1rem", padding: "0.75rem" }}
+                    >
                       {methods.map((m) => (
                         <option key={m} value={m}>
                           {m}
@@ -1154,20 +1147,22 @@ const GlobalSettingsModalForRole = ({
                       ))}
                     </select>
                   </div>
-                  <div className={styles.inputGroup}>
+                  <div className={styles.inputGroup} style={{ marginBottom: "0.75rem" }}>
                     {condition.method === "BETWEEN" ? (
-                      <div className={styles.betweenInputs}>
+                      <div className={styles.betweenInputs} style={{ display: "flex", gap: "0.5rem" }}>
                         <input
                           className={styles.inputField}
                           value={condition.values[0]}
                           onChange={(e) => updateConditionField(index, condIndex, "values", [e.target.value, condition.values[1]])}
                           placeholder="Min"
+                          style={{ fontSize: "1.1rem", padding: "0.75rem", flex: "1" }}
                         />
                         <input
                           className={styles.inputField}
                           value={condition.values[1]}
                           onChange={(e) => updateConditionField(index, condIndex, "values", [condition.values[0], e.target.value])}
                           placeholder="Max"
+                          style={{ fontSize: "1.1rem", padding: "0.75rem", flex: "1" }}
                         />
                       </div>
                     ) : (
@@ -1176,31 +1171,36 @@ const GlobalSettingsModalForRole = ({
                         value={condition.values[0]}
                         onChange={(e) => updateConditionField(index, condIndex, "values", [e.target.value])}
                         placeholder="Value"
+                        style={{ fontSize: "1.1rem", padding: "0.75rem", width: "100%" }}
                       />
                     )}
                   </div>
-                  <button onClick={() => removeConditionFromRule(index, condIndex)} className={styles.secondaryButton}>
+                  <button
+                    onClick={() => removeConditionFromRule(index, condIndex)}
+                    className={styles.secondaryButton}
+                    style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px", marginTop: "0.5rem" }}
+                  >
                     Remove Condition
                   </button>
                 </div>
               ))}
-              <button onClick={() => addConditionToRule(index)} className={styles.primaryButton}>
+              <button onClick={() => addConditionToRule(index)} className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px", marginRight: "0.5rem" }}>
                 + Add Condition
               </button>
-              <button onClick={() => removeRule(index)} className={styles.secondaryButton}>
+              <button onClick={() => removeRule(index)} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
                 Delete Rule
               </button>
             </div>
           ))}
-          <button onClick={addRule} className={styles.primaryButton}>
+          <button onClick={addRule} className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
             <FaPlus /> Add Rule
           </button>
         </div>
-        <div className={styles.modalActions}>
-          <button onClick={onClose} className={styles.secondaryButton}>
+        <div className={styles.modalActions} style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem", marginTop: "2rem" }}>
+          <button onClick={onClose} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
             Cancel
           </button>
-          <button onClick={handleSave} className={styles.primaryButton}>
+          <button onClick={handleSave} className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
             Close Editor
           </button>
         </div>
@@ -1208,3 +1208,68 @@ const GlobalSettingsModalForRole = ({
     </div>
   );
 };
+
+// --- UserCreateModal Component ---
+interface UserCreateModalProps {
+  onClose: () => void;
+  onCreate: (newUser: { username: string; firstName: string; lastName: string; email: string }) => void | Promise<void>;
+}
+const UserCreateModal = ({ onClose, onCreate }: UserCreateModalProps) => {
+  const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onCreate({ username, firstName, lastName, email });
+  };
+
+  return (
+    <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="userCreateModalTitle">
+      <div className={`${styles.appCard} ${styles.userModalCard}`}>
+        <h3 id="userCreateModalTitle" className={styles.modalTitle} style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1rem" }}>
+          Add New User
+        </h3>
+        <p className={styles.modalSubtitle} style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>
+          Please fill in the details for the new user.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Username
+            </label>
+            <input type="text" className={styles.inputField} value={username} onChange={(e) => setUsername(e.target.value)} required style={{ fontSize: "1.1rem", padding: "0.75rem" }} />
+          </div>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              First Name
+            </label>
+            <input type="text" className={styles.inputField} value={firstName} onChange={(e) => setFirstName(e.target.value)} required style={{ fontSize: "1.1rem", padding: "0.75rem" }} />
+          </div>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Last Name
+            </label>
+            <input type="text" className={styles.inputField} value={lastName} onChange={(e) => setLastName(e.target.value)} required style={{ fontSize: "1.1rem", padding: "0.75rem" }} />
+          </div>
+          <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>
+            <label className={styles.label} style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              Email
+            </label>
+            <input type="email" className={styles.inputField} value={email} onChange={(e) => setEmail(e.target.value)} required style={{ fontSize: "1.1rem", padding: "0.75rem" }} />
+          </div>
+          <div className={styles.modalActions} style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem" }}>
+            <button type="button" onClick={onClose} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
+              Cancel
+            </button>
+            <button type="submit" className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
+              Add User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+

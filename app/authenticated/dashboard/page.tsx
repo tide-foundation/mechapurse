@@ -171,8 +171,8 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center px-6 py-24 w-full font-['Inter']">
-      <div className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-6">
+    <main className="flex flex-col items-center justify-center px-6 py-24 w-full font-['Inter']" >
+      <div className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-2 !pt-8">
         <div ref={leftColumnRef} className="md:col-span-2 space-y-6">
           <WalletInfo
             walletAddress={walletAddress}
@@ -198,6 +198,6 @@ export default function Dashboard() {
         onScrollLeft={scrollLeft}
         onScrollRight={scrollRight}
       />
-    </main>
+    </main >
   );
 }

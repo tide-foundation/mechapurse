@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
         // Check for existing rule from keycloak
         const realmKeysConfig = await getRealmKeyRules(token);
 
-        console.log("werwerwe" + JSON.stringify(realmKeysConfig.rules))
         if (realmKeysConfig.rulesCert !== "") {
             settings.previousVersion = bytesToBase64(base64ToBytes(realmKeysConfig.rulesCert).slice(32, 64)); // start at index 32 and return length 32
         }
@@ -65,18 +64,6 @@ export async function POST(req: NextRequest) {
 
         const threshold = await getAdminThreshold(token);
         const approvalUri = await createApprovalURI(token);
-        
-        // get threshold
-
-        // call signRules if meet threshold
-
-        // else just add to db
-        // console.log(settings)
-        // // Save and sign the rules (rules should be an array of RuleDefinition objects)
-        // await saveAndSignRules(settings, token);
-
-        // await AddRuleConfiguration(JSON.stringify(realmKeysConfig.rules), realmKeysConfig.rulesCert);
-
         return NextResponse.json({ settings: updatedSettings, threshold: threshold, uri: approvalUri.customDomainUri, previousRuleSetting: JSON.stringify(realmKeysConfig.rules), previousRuleSettingCert: realmKeysConfig.rulesCert, voucherUrl: approvalUri.voucherUrl });
     } catch (error) {
         console.error("Error saving global rules:", error);
