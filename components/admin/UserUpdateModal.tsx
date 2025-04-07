@@ -3,6 +3,7 @@
 import { useState } from "react";
 import styles from "@/styles/AdminDashboard.module.css";
 import { UserUpdate } from "@/interfaces/interface";
+import { useAuth } from "../AuthContext";
 
 interface User {
   id: string;
@@ -30,6 +31,7 @@ const UserUpdateModal = ({
   onClose,
   onUpdate,
 }: UserUpdateModalProps) => {
+  const {vuid} = useAuth();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   // Save the initial roles for later comparison.
@@ -67,12 +69,22 @@ const UserUpdateModal = ({
     onUpdate({ id: user.id, name, email, role: assignedRoles, rolesToAdd, rolesToRemove });
   };
 
-  // Generate the invite URL based on the user id.
-  const linkUrl = `https://tide-wallet.io/link?userId=${user.id}`;
+  const getTideLinkUrl = async () => {
+    const currentUrl = window.location.href;
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const resp = await fetch(`/api/admin/users/tide?userId=${user.id}&redirect_uri=${encodedUrl}`,{
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await resp.json()
+    return data.link;
+
+  }
 
   // Copy link function without URL preview.
   const handleCopyLink = async () => {
     try {
+      const linkUrl = await getTideLinkUrl();
       await navigator.clipboard.writeText(linkUrl);
       setCopyStatus("Copied!");
       setTimeout(() => setCopyStatus(""), 2000);

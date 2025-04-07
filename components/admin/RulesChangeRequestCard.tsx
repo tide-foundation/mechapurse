@@ -7,9 +7,9 @@ interface RulesChangeRequestCardProps {
     changeRequest: ChangeRequest;
     onSelect: () => void;
     selected: boolean;
+
 }
 
-// --- Helper Functions ---
 function safeParseJSON(data: any) {
     if (typeof data === "string") {
         try {
@@ -62,13 +62,10 @@ const RulesChangeRequestCard = ({ changeRequest, onSelect, selected }: RulesChan
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                     <div>
-                        <strong>Action:</strong> {changeRequest.action || "N/A"}
+                        <strong>Requested By:</strong> {changeRequest.user}
                     </div>
                     <div>
                         <strong>Status:</strong> {getStatusBadge(changeRequest.status || "DRAFT")}
-                    </div>
-                    <div>
-                        <strong>Role:</strong> {changeRequest.role || "N/A"}
                     </div>
                 </div>
             </div>

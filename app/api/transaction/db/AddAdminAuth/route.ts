@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
 
-        const { id, vuid, authorization } = body;
+        const { id, vuid, authorization, rejected } = body;
 
         // Verify authorization token
         const cookieStore = cookies();
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        await AddAuthorization(id, vuid, authorization);
+        await AddAuthorization(id, vuid, authorization, rejected);
 
         return NextResponse.json({ message: "Succesfully added admin auth" });
     } catch (err) {

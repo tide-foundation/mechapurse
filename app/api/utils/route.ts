@@ -75,8 +75,6 @@ export async function POST(req: NextRequest) {
                 const initCert = await getTideRealmAdminInitCert(token);
 
                 return NextResponse.json({ authorization: auth, initCert: initCert });
-
-
         }
         
         

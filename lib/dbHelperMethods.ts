@@ -11,11 +11,11 @@ export const createAuthorization = async (authorizerApproval: string, authorizer
     return { authorization: data.authorization, ruleSettings: data.ruleSettings };
 };
 
-export const addDraftRequest = async (data: string, dataJson: string): Promise<DraftSignRequest> => {
+export const addDraftRequest = async (vuid: string, data: string, dataJson: string): Promise<DraftSignRequest> => {
     const response = await fetch("/api/transaction/db/AddDraftRequest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data, dataJson }),
+        body: JSON.stringify({ vuid, data, dataJson }),
     });
     const resp = await response.json();
     if (!response.ok) throw new Error(resp.error || "Unable to add draft");

@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTransactionBuilder } from "@/lib/transactionBuilderConfig";
+import { createApprovalURI, getAdminThreshold, getRealmKeyRules, getTransactionRoles, getUserByVuid, saveAndSignRules } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
-import { Roles } from "@/app/constants/roles";
-import { base64UrlToBytes } from "@/lib/tideSerialization";
-import { getPublicKey } from "@/lib/tidecloakConfig";
-import { BigNum, Ed25519Signature, FixedTransaction, TransactionBody, Vkey } from "@emurgo/cardano-serialization-lib-browser";
-import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
-import { createApprovalURI, signTx } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
-import { routeRoleMapping } from "@/lib/authConfig";
-import { AddDraftSignRequest, AddRuleSettingsDraft } from "@/lib/db";
-import { randomUUID } from "crypto";
+import { Roles } from "@/app/constants/roles";
+import { RoleRepresentation } from "@/lib/keycloakTypes";
+import { RuleDefinition, RuleSettingDraft, RuleSettings } from "@/interfaces/interface";
+import { AddRuleConfiguration, DeleteRuleSettingsDraft, GetRuleSettingsDraft, GetRuleSettingsDraftById } from "@/lib/db";
+import { base64ToBytes, bytesToBase64, getHumanReadableObject } from "tidecloak-js";
 
-const allowedRoles = [Roles.Admin];
+const allowedRole = [Roles.Admin];
 
 export async function POST(req: NextRequest) {
     try {
@@ -23,8 +19,7 @@ export async function POST(req: NextRequest) {
         } catch (err) {
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
-
-        const { vuid, draft, draftJson } = body;
+        const { id } = body;
 
         // Verify authorization token
         const cookieStore = cookies();
@@ -33,15 +28,18 @@ export async function POST(req: NextRequest) {
         if (!token) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const user = await verifyTideCloakToken(token, allowedRoles);
+        const user = await verifyTideCloakToken(token, allowedRole);
         if (!user) throw new Error("Invalid token");
 
-        const draftReq = await AddRuleSettingsDraft(vuid, draft, draftJson);
+        
+        await DeleteRuleSettingsDraft(id)
 
-        return NextResponse.json({ draftReq: draftReq });
+        return NextResponse.json({message: "Successfully deleted"});
+
     } catch (err) {
         console.error("Internal Server Error:", err);
         return NextResponse.json({ error: "Internal Server Error: " + err }, { status: 500 });
     }
 
 }
+

@@ -10,11 +10,30 @@ export interface InitCertResponse {
 }
 const KEYCLOAK_AUTH_SERVER = kcData["auth-server-url"];
 const REALM = kcData["realm"];
+const CLIENT = kcData["resource"]
 
 const TC_URL = `${KEYCLOAK_AUTH_SERVER}/admin/realms/${REALM}`;
+
 const REALM_MGMT = "realm-management";
 const TX_MGMT = 'TX_MANAGMENT'
 
+
+export const getUserByVuid = async (vuid: string, token: string): Promise<UserRepresentation[]> => {
+    const response = await fetch(`${TC_URL}/users?q=vuid:${vuid}`, {
+        method: 'GET',
+        headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        }
+    });
+
+    if (!response.ok) {
+        // Optionally handle non-OK responses.
+        throw new Error(`Error fetching user: ${response.statusText}`);
+    }
+    
+    return response.json();
+}
 
 export const getTideRealmAdminInitCert = async (token: string): Promise<InitCertResponse> => {
     const client = await getClientByClientId(REALM_MGMT, token)
@@ -433,14 +452,15 @@ export const RemoveUserRole = async (userId: string, roleName: string, token: st
     });
     if (!response.ok) {
         const errorBody = await response.text();
-        console.error(`Error adding authorizer info: ${response.statusText}`);
-        throw new Error(`Error adding authorizer info: ${errorBody}`);
+        console.error(`Error removing role from user: ${response.statusText}`);
+        throw new Error(`Error removing role from user: ${errorBody}`);
     }
     return;
 }
 
 export const AddUser = async (userRep: UserRepresentation, token: string): Promise<void> => {
-    const response = await fetch(`${TC_URL}/users}`, {
+    console.log("MADE IT HERE")
+    const response = await fetch(`${TC_URL}/users`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -450,8 +470,8 @@ export const AddUser = async (userRep: UserRepresentation, token: string): Promi
     });
     if (!response.ok) {
         const errorBody = await response.text();
-        console.error(`Error adding authorizer info: ${response.statusText}`);
-        throw new Error(`Error adding authorizer info: ${errorBody}`);
+        console.error(`Error adding user: ${response.statusText}`);
+        throw new Error(`Error adding user: ${errorBody}`);
     }
     return;
 }
@@ -597,3 +617,30 @@ export const CancelChangeRequest = async (changeSet: ChangeSetRequest, token: st
     return;
 
 }
+
+export const GetTideLinkUrl = async (userId: string, token: string, redirect_uri: string) => {
+    if (!userId || !token) {
+        throw new Error("UserId and token must be provided.");
+    }
+    
+    const response = await fetch(`${TC_URL}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200&redirect_uri=${redirect_uri}&client_id=${CLIENT}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(["link-tide-account-action"])
+    });
+
+
+    if (!response.ok) {
+        const errorDetails = await response.text();
+        throw new Error(`Failed to fetch tide link URL: ${errorDetails}`);
+    }
+
+
+    return await response.text();
+};
+
+
+

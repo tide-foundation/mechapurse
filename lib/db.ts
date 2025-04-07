@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { ISqlite, IMigrate, open } from 'sqlite';
-import { DraftSignRequest, AdminAuthorizationPack, RuleConfiguration } from '@/interfaces/interface';
+import { DraftSignRequest, AdminAuthorizationPack, RuleConfiguration, RuleSettingDraft, RuleSettingAuthorization } from '@/interfaces/interface';
 
 // Open (or create) a database file named "database.sqlite"
 const dbPromise = open({
@@ -17,6 +17,7 @@ async function initializeDatabase() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS cardanoTxRequests (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       txBody TEXT,
       draft TEXT,
       draftJson TEXT,
@@ -30,6 +31,7 @@ async function initializeDatabase() {
       userId TEXT,
       cardanoTxRequestId TEXT NOT NULL,
       authorization TEXT,
+      rejected BOOLEAN,
       FOREIGN KEY (cardanoTxRequestId) REFERENCES cardanoTxRequests(id) ON DELETE CASCADE
     );
   `);
@@ -45,10 +47,14 @@ async function initializeDatabase() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS ruleSettingsDraft (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       ruleReqDraft TEXT,
-      expiry TEXT
+      ruleReqDraftJson TEXT,
+      expiry TEXT,
+      status TEXT DEFAULT 'DRAFT'
     );
   `);
+  
   
 
   await db.exec(`
@@ -57,11 +63,12 @@ async function initializeDatabase() {
       userId TEXT,
       ruleSettingsDraftId TEXT NOT NULL,
       authorization TEXT,
+      rejected BOOLEAN,
       FOREIGN KEY (ruleSettingsDraftId) REFERENCES ruleSettingsDraft(id) ON DELETE CASCADE
     );
   `);
 
-  console.log("SQLite database initialized: 'cardanoTxRequests', 'cardanoTxAuthorizations', and 'ruleSettings' tables are ready.");
+  console.log("SQLite database initialized: 'cardanoTxRequests', 'cardanoTxAuthorizations','ruleSettings' and 'ruleSettingsDraft' tables are ready.");
 }
 
 initializeDatabase().catch((err) => {
@@ -138,7 +145,18 @@ export async function GetDraftSignRequestByUser(requestId: string, userId: strin
   return rows[0] || null;
 }
 
-export async function AddDraftSignRequest(txBody: string, draft: string, draftJson: string): Promise<DraftSignRequest> {
+// export const UpdateTxDraftStatusById = async (id: string, newStatus: string) => {
+//   const db = await dbPromise;
+
+//   await db.run(
+//     `UPDATE cardanoTxRequests
+//      SET status = ?
+//      WHERE id = ?;`,
+//     [newStatus, id]
+//   );
+// };
+
+export async function AddDraftSignRequest(userId: string,txBody: string, draft: string, draftJson: string): Promise<DraftSignRequest> {
   const db = await dbPromise;
   const id = crypto.randomUUID();
   const date = new Date();
@@ -149,8 +167,9 @@ export async function AddDraftSignRequest(txBody: string, draft: string, draftJs
 
 
   await db.run(
-    'INSERT INTO cardanoTxRequests (id, txBody, draft, draftJson, expiry) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO cardanoTxRequests (id, userId, txBody, draft, draftJson, expiry) VALUES (?, ?, ?, ?, ?, ?)',
     id,
+    userId,
     txBody,
     draft,
     draftJson,
@@ -159,27 +178,30 @@ export async function AddDraftSignRequest(txBody: string, draft: string, draftJs
 
   return {
     id,
+    userId,
     txBody,
     draft,
     draftJson,
-    expiry: expiry
+    expiry: expiry,
   };
 }
 
-export async function AddAuthorization(cardanoTxRequestId: string, userId: string, authorization: string) {
+export async function AddAuthorization(cardanoTxRequestId: string, userId: string, authorization: string, rejected: boolean) {
   const db = await dbPromise;
   const id = crypto.randomUUID();
   const existingAuth = await GetDraftSignRequestByUser(cardanoTxRequestId, userId);
+  const isRejected = rejected ? 1 : 0;
 
   if (existingAuth) {
-    return;
+    throw new Error(`Authorization already exists for draft ${cardanoTxRequestId} and user ${userId}`);
   } else {
     await db.run(
-      'INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization) VALUES (?, ?, ?, ?)',
+      'INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization, rejected) VALUES (?, ?, ?, ?)',
       id,
       userId,
       cardanoTxRequestId,
-      authorization
+      authorization,
+      isRejected
     );
   }
 }
@@ -197,25 +219,40 @@ export async function DeleteAuthorization(id: string) {
 /**
  * Retrieves the current rule settings draft.
  */
-export async function GetRuleSettingsDraft(): Promise<[{ id: string; ruleReqDraft: string; expiry: string }] | null> {
+export async function GetRuleSettingsDraft(): Promise<[RuleSettingDraft] | null> {
   const db = await dbPromise;
-  const row = await db.all<[{ id: string; ruleReqDraft: string; expiry: string }] | null>('SELECT * FROM ruleSettingsDraft');
+  const row = await db.all<[RuleSettingDraft] | null>('SELECT * FROM ruleSettingsDraft');
   if (!row) return null;
   return row;
 }
 
-export async function GetRuleSettingsDraftById(id: string): Promise<{ id: string; ruleReqDraft: string; expiry: string } | null> {
+export async function GetRuleSettingsDraftById(id: string): Promise<RuleSettingDraft | null> {
   const db = await dbPromise;
   const row = await db.get('SELECT * FROM ruleSettingsDraft WHERE id = ?', id);
   if (!row) return null;
   return {
     id: row.id,
+    userId: row.userId,
     ruleReqDraft: row.ruleReqDraft,
+    ruleReqDraftJson: row.ruleReqDraftJson,
     expiry: row.expiry,
+    status: row.status
+
   };
 }
 
-export async function AddRuleSettingsDraft(ruleReqDraft: string): Promise<{ id: string; ruleReqDraft: string; expiry: string } | null> {
+export const UpdateRuleSettingDraftStatusById = async (id: string, newStatus: string) => {
+  const db = await dbPromise;
+
+  await db.run(
+    `UPDATE ruleSettingsDraft
+     SET status = ?
+     WHERE id = ?;`,
+    [newStatus, id]
+  );
+};
+
+export async function AddRuleSettingsDraft(userId: string,ruleReqDraft: string, ruleReqDraftJson: string): Promise<RuleSettingDraft| null> {
   const db = await dbPromise;
   const id = crypto.randomUUID();
   const date = new Date();
@@ -225,9 +262,11 @@ export async function AddRuleSettingsDraft(ruleReqDraft: string): Promise<{ id: 
   ).toString(); // 1 week later
 
   await db.run(
-    'INSERT INTO ruleSettingsDraft (id, ruleReqDraft, expiry) VALUES (?, ?, ?)',
+    'INSERT INTO ruleSettingsDraft (id, userId, ruleReqDraft, ruleReqDraftJson, expiry) VALUES (?, ?, ?, ?, ?)',
     id,
+    userId,
     ruleReqDraft,
+    ruleReqDraftJson,
     expiry
   );
   return await GetRuleSettingsDraftById(id);
@@ -244,31 +283,26 @@ export async function DeleteRuleSettingsDraft(id: string): Promise<void> {
 /**
  * Retrieves a specific rule settings authorization by its primary id.
  */
-export async function GetRuleSettingsAuthorizationById(id: string): Promise<{ id: string; userId: string; ruleSettingsDraftId: string; authorization: string } | null> {
+export async function GetRuleSettingsAuthorizationByDraftId(draftId: string): Promise<RuleSettingAuthorization[] | null> {
   const db = await dbPromise;
-  const row = await db.get('SELECT * FROM ruleSettingsAuthorization WHERE id = ?', id);
+  const row = await db.all<RuleSettingAuthorization>('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', draftId);
   if (!row) return null;
-  return {
-    id: row.id,
-    userId: row.userId,
-    ruleSettingsDraftId: row.ruleSettingsDraftId,
-    authorization: row.authorization,
-  };
+  return [row];
 }
 
 /**
  * Retrieves all rule settings authorizations for a given rule settings draft.
  */
-export async function GetRuleSettingsAuthorizationsByDraft(ruleSettingsDraftId: string): Promise<Array<{ id: string; userId: string; authorization: string }>> {
+export async function GetRuleSettingsAuthorizationsByDraft(ruleSettingsDraftId: string): Promise<RuleSettingAuthorization[]> {
   const db = await dbPromise;
-  const rows = await db.all('SELECT id, userId, authorization FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', ruleSettingsDraftId);
+  const rows = await db.all<RuleSettingAuthorization[]>('SELECT id, userId, authorization FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', ruleSettingsDraftId);
   return rows;
 }
 
 /**
  * Creates a new rule settings authorization or updates an existing one for a given draft and user.
  */
-export async function AddOrUpdateRuleSettingsAuthorization(ruleSettingsDraftId: string, userId: string, authorization: string): Promise<void> {
+export async function AddRuleSettingsAuthorization(ruleSettingsDraftId: string, userId: string, authorization: string, rejected: boolean): Promise<void> {
   const db = await dbPromise;
   // Check if an authorization for this draft and user already exists.
   const existingAuth = await db.get(
@@ -276,22 +310,19 @@ export async function AddOrUpdateRuleSettingsAuthorization(ruleSettingsDraftId: 
     ruleSettingsDraftId,
     userId
   );
+  const isRejected = rejected ? 1 : 0;
 
   if (existingAuth) {
-    await db.run(
-      'UPDATE ruleSettingsAuthorization SET authorization = ? WHERE ruleSettingsDraftId = ? AND userId = ?',
-      authorization,
-      ruleSettingsDraftId,
-      userId
-    );
+    throw new Error(`Authorization already exists for draft ${ruleSettingsDraftId} and user ${userId}`);
   } else {
     const id = crypto.randomUUID();
     await db.run(
-      'INSERT INTO ruleSettingsAuthorization (id, userId, ruleSettingsDraftId, authorization) VALUES (?, ?, ?, ?)',
+      'INSERT INTO ruleSettingsAuthorization (id, userId, ruleSettingsDraftId, authorization, rejected) VALUES (?, ?, ?, ?, ?)',
       id,
       userId,
       ruleSettingsDraftId,
-      authorization
+      authorization,
+      isRejected
     );
   }
 }

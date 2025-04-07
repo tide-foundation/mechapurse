@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
         }
 
-        const { txBody, data, dataJson } = body;
+        const { vuid, txBody, data, dataJson } = body;
 
         // Verify authorization token
         const cookieStore = cookies();
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        const draftReq = await AddDraftSignRequest(txBody, data, dataJson);
+        const draftReq = await AddDraftSignRequest(vuid, txBody, data, dataJson);
   
         return NextResponse.json({ draftReq: draftReq });
     } catch (err) {

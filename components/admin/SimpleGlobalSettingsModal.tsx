@@ -5,6 +5,7 @@ import { FaChevronRight } from "react-icons/fa";
 import styles from "@/styles/AdminDashboard.module.css";
 import { RuleSet, RuleDefinition, RuleCondition } from "@/interfaces/interface";
 import { DEFAULT_THRESHOLD_KEY } from "@/app/authenticated/admin/page";
+import { useAuth } from "../AuthContext";
 
 interface SimpleGlobalSettingsModalProps {
     roleKey: string;
@@ -21,6 +22,7 @@ export default function SimpleGlobalSettingsModal({
     onSave,
     isThreshold,
 }: SimpleGlobalSettingsModalProps) {
+    const {walletAddressHex } = useAuth()
     const [minAmount, setMinAmount] = useState("");
     const [maxAmount, setMaxAmount] = useState("");
     const [maxFee, setMaxFee] = useState("");
@@ -46,7 +48,7 @@ export default function SimpleGlobalSettingsModal({
         rules.push({
             ruleId: undefined,
             field: "Outputs.Address",
-            conditions: [{ method: "FILTER_OUT_VALUES_EQUAL_TO", values: ["change"] }],
+            conditions: [{ method: "FILTER_OUT_VALUES_EQUAL_TO", values: [walletAddressHex] }],
         });
         if (maxFee) {
             rules.push({
@@ -56,7 +58,6 @@ export default function SimpleGlobalSettingsModal({
             });
         }
         const newRuleSet: RuleSet = {
-            ruleSetId: isThreshold ? "threshold_rule" : undefined,
             rules,
         };
         if (roleKey !== DEFAULT_THRESHOLD_KEY && threshold) {
@@ -140,7 +141,7 @@ export default function SimpleGlobalSettingsModal({
                         />
                     </div>
                 )}
-                <div className={styles.inputGroup}>
+                {/* <div className={styles.inputGroup}>
                     <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
                         Exclusion Rule
                     </label>
@@ -148,15 +149,15 @@ export default function SimpleGlobalSettingsModal({
                         className={styles.inputDescription}
                         style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: "1rem", lineHeight: "1.4", marginBottom: "1rem" }}
                     >
-                        Transactions where <code>Outputs.Address</code> equals "change" will be automatically excluded.
+                        Transactions where <code>Outputs.Address</code> equals your wallet address will be automatically excluded.
                     </p>
-                </div>
+                </div> */}
                 <div className={styles.modalActions} style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem" }}>
                     <button onClick={onClose} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
                         Cancel
                     </button>
                     <button onClick={handleSave} className={styles.primaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
-                        Save Rules
+                        OK
                     </button>
                 </div>
             </div>

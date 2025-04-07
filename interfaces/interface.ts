@@ -24,17 +24,37 @@ export interface UserChangeRecord {
 
 export interface DraftSignRequest {
     id: string,
+    userId: string,
     txBody: string,
     draft: string,
     draftJson: string,
-    expiry: string
+    expiry: string,
 }
+
+export interface RuleSettingDraft {
+    id: string,
+    userId: string,
+    ruleReqDraft: string,
+    ruleReqDraftJson: string,
+    expiry: string,
+    status: string
+}
+export interface RuleSettingAuthorization {
+    id: string,
+    userId: string,
+    ruleSettingsDraftId: string,
+    authorization: string,
+    rejected: boolean
+}
+
 
 export interface AdminAuthorizationPack {
     id: string,
     userId: string,
     cardanoTxRequestId: string,
-    adminAuthorization: string
+    authorization: string,
+    rejected: boolean
+
 }
 
 export interface User {

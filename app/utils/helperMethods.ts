@@ -19,12 +19,14 @@ export const createAuthorization = async (
   };
 
   export const addRuleSettingDraftRequest = async (
+    vuid: string,
     draft: string,
+    draftJson: string
   ): Promise<{ id: string; ruleReqDraft: any; expiry: string }> => {
     const response = await fetch("/api/admin/db/rules/AddRuleSettingDraftReq", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ draft }),
+      body: JSON.stringify({ vuid, draft, draftJson }),
     });
 
     const resp = await response.json();

@@ -3,7 +3,7 @@
     background-color: #0a0a0c;
     color: #e0f7fa;
     font-family: 'Inter', 'Orbitron', monospace;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     width: 100%;
     padding: 2rem;

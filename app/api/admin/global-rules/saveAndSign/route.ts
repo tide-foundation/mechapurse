@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { Roles } from "@/app/constants/roles";
 import { RoleRepresentation } from "@/lib/keycloakTypes";
 import { RuleDefinition, RuleSettings } from "@/interfaces/interface";
-import { AddRuleConfiguration, GetRuleSettingsAuthorizationById } from "@/lib/db";
+import { AddRuleConfiguration, UpdateRuleSettingDraftStatusById } from "@/lib/db";
 
 const allowedRole = [Roles.Admin];
 
@@ -24,9 +24,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 })
         }
 
-        const { ruleDraft, authorizations, expiry, newSetting } = await req.json();
+        const { id, ruleDraft, authorizations, expiry, newSetting } = await req.json();
         const res = await saveAndSignRules(ruleDraft, expiry, authorizations, token, newSetting);
-
         await AddRuleConfiguration(newSetting, res)
         return NextResponse.json({ message: "SUCCESS!!!" });
     } catch (error) {

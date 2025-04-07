@@ -5,10 +5,11 @@ import IAMService from "@/lib/IAMService";
 import { InitCertResponse } from "@/lib/tidecloakApi";
 
 interface AuthContextType {
+    walletAddressHex: string,
     isAuthenticated: boolean;
     isLoading: boolean;
-    hasRole: (role: string, clientId?: string) => boolean;
     vuid: string;
+    hasRole: (role: string, clientId?: string) => boolean;
     createTxDraft: (txBody: string) => string;
     signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
     createRuleSettingsDraft: (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => string;
@@ -22,6 +23,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [vuid, setVuid] = useState<string>("");
+    const [walletAddress, setWalletAddress] = useState<string>("")
+    const [walletAddressHex, setWalletAddressHex] = useState<string>("")
+
+
+    const getWalletAddress = async () => {
+        return await fetch("/api/dashboard?type=wallet", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+      };
 
     useEffect(() => {
         const initAuth = async () => {
@@ -30,8 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsAuthenticated(authenticated);
                 setIsLoading(false);
             });
+            const walletResp = await (await getWalletAddress()).json();
             const vuidFromToken = IAMService.getVuid();
             setVuid(vuidFromToken ?? "");
+            setWalletAddressHex(walletResp.addressHex ?? "")
+            setWalletAddress(walletResp.addressHex ?? "")
+
         };
         initAuth();
     }, []);
@@ -61,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft  }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex  }}>
             {children}
         </AuthContext.Provider>
     );

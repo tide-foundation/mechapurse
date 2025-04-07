@@ -8,7 +8,7 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                vaultless: {
+                app: {
                     background: "#0a0a0c",
                     surface: "#1a1c20",
                     accent: "#4da8da",

@@ -125,8 +125,6 @@ interface UserChangeRecord {
   accessDraft: string;
 }
 
-
-
 // --- Main AdminDashboard Component ---
 export default function AdminDashboard() {
   const { vuid, createRuleSettingsDraft, signRuleSettingsDraft } = useAuth();
@@ -249,16 +247,18 @@ export default function AdminDashboard() {
         ) {
           data.validationSettings = {
             ...data.validationSettings,
+            [DEFAULT_THRESHOLD_KEY]: [],
+
           };
         }
-        setGlobalSettings(data || { id: "", validationSettings: { [DEFAULT_THRESHOLD_KEY]: [{ rules: [] }] } });
+        setGlobalSettings(data || { id: "", validationSettings: { [DEFAULT_THRESHOLD_KEY]: [] } });
         const newExpanded: { [key: string]: boolean } = {};
         Object.keys(data.validationSettings || {}).forEach((key) => {
           newExpanded[key] = true;
         });
         setExpandedKeys(newExpanded);
       } else {
-        setGlobalSettings({ id: "", validationSettings: { [DEFAULT_THRESHOLD_KEY]: [{ rules: [] }] } });
+        setGlobalSettings({ id: "", validationSettings: { [DEFAULT_THRESHOLD_KEY]: [] } });
       }
     } catch (error) {
       console.error("Error fetching global settings:", error);
@@ -303,7 +303,7 @@ export default function AdminDashboard() {
         reqDraft.previousRuleSetting,
         reqDraft.previousRuleSettingCert
       );
-      const draftReq = await addRuleSettingDraftRequest(draft);
+      const draftReq = await addRuleSettingDraftRequest(vuid, draft, reqDraft.settings);
       if (draftReq === null) {
         throw new Error("No rule sign draft req");
       }
@@ -311,24 +311,68 @@ export default function AdminDashboard() {
 
       const authApproval = await heimdall.getAuthorizerApproval(draft, "Rules:1", draftReq.expiry, "base64");
 
-      if (authApproval.accepted === true) {
+      if (authApproval.accepted) {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
         heimdall.closeEnclave();
         const data = await createAuthorization(authApproval.data, authzAuthn, "rules");
-        if (!isNaN(Number(reqDraft.threshold)) && Number(reqDraft.threshold) === 1) {
-          const res = await fetch("/api/admin/global-rules/saveAndSign", {
+        console.log(data)
+        const threshold = Number(reqDraft.threshold);
+      
+        if (!isNaN(threshold) && threshold === 1) {
+          const endpoint = "/api/admin/global-rules/saveAndSign";
+          const payload = {
+            ruleDraft: draftReq.ruleReqDraft,
+            authorizations: [data.authorization],
+            expiry: draftReq.expiry,
+            newSetting: reqDraft.settings,
+          };
+      
+          const res = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ruleDraft: draftReq.ruleReqDraft,
-              authorizations: [data.authorization],
-              expiry: draftReq.expiry,
-              newSetting: reqDraft.settings,
-            }),
+            body: JSON.stringify(payload),
           });
-          if (!res.ok) throw new Error("Failed to save global settings");
+      
+          if (!res.ok) {
+            throw new Error("Failed to save global settings");
+          }
+
+          // remove 
+          await fetch("/api/admin/change-requests/rules/cancel", {
+            method: "POST",
+            body: JSON.stringify({ id: draftReq.id }),
+          });
+        } else {
+          const endpoint = "/api/admin/change-requests/rules/authorization";
+          const payload = {
+            ruleReqDraftId: draftReq.id,
+            vuid: vuid,
+            authorizations: data.authorization,
+            rejected: false,
+          };
+      
+          await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
         }
+      } else {
+        const endpoint = "/api/admin/change-requests/rules/authorization";
+        const payload = {
+          ruleReqDraftId: draftReq.id,
+          vuid: vuid,
+          authorizations: null,
+          rejected: true,
+        };
+      
+        await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
+      
       setUnsavedChanges(false);
       fetchGlobalSettings();
       await fetchRulesChangeRequests();
@@ -414,12 +458,13 @@ export default function AdminDashboard() {
 
   const createUser = async (newUser: { username: string; firstName: string; lastName: string; email: string }) => {
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch("/api/admin/users/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({...newUser}),
       });
-      if (!res.ok) throw new Error("Failed to create user");
+      const message = await res.json();
+      if (!res.ok) throw new Error("Failed to create user. Error " + message.error);
       fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
@@ -504,75 +549,132 @@ export default function AdminDashboard() {
     setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // UPDATED: Review change request method differentiates based on type.
   const reviewChangeRequest = async (cr: ChangeRequest) => {
     const changeRequest: ChangeSetRequest = {
       changeSetId: cr.draftRecordId,
       changeSetType: cr.changeSetType,
       actionType: cr.actionType,
     };
-    const response = await fetch("/api/admin/change-requests/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changeRequest),
-    });
-    const res = (await response.json()).response;
-    const heimdall = new Heimdall(res.customDomainUri, [vuid]);
-    await heimdall.openEnclave();
-    const authorizerApproval = await heimdall.getAuthorizerApproval(
-      res.changeSetRequests,
-      "UserContext:1",
-      res.expiry,
-      "base64url"
-    );
-    if (authorizerApproval.draft === res.changeSetRequests) {
-      if (authorizerApproval.accepted === false) {
-        await fetch("/api/admin/change-requests/addRejection", {
-          method: "POST",
-          body: JSON.stringify({ changeRequest: changeRequest }),
-        });
-      } else if (authorizerApproval.accepted === true) {
-        const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
-        await fetch("/api/admin/change-requests/addAuthorization", {
-          method: "POST",
-          body: JSON.stringify({
-            changeRequest: changeRequest,
-            authorizerApproval: authorizerApproval.data,
-            authorizerAuthentication: authorizerAuthentication,
-          }),
-        });
+    if (cr.type === "user") {
+      const response = await fetch("/api/admin/change-requests/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(changeRequest),
+      });
+      const res = (await response.json()).response;
+      const heimdall = new Heimdall(res.customDomainUri, [vuid]);
+      await heimdall.openEnclave();
+      const authorizerApproval = await heimdall.getAuthorizerApproval(
+        res.changeSetRequests,
+        "UserContext:1",
+        res.expiry,
+        "base64url"
+      );
+      if (authorizerApproval.draft === res.changeSetRequests) {
+        if (authorizerApproval.accepted === false) {
+          await fetch("/api/admin/change-requests/addRejection", {
+            method: "POST",
+            body: JSON.stringify({ changeRequest: changeRequest }),
+          });
+        } else if (authorizerApproval.accepted === true) {
+          const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
+          await fetch("/api/admin/change-requests/addAuthorization", {
+            method: "POST",
+            body: JSON.stringify({
+              changeRequest: changeRequest,
+              authorizerApproval: authorizerApproval.data,
+              authorizerAuthentication: authorizerAuthentication,
+            }),
+          });
+        }
       }
+      heimdall.closeEnclave();
+    } else if (cr.type === "rules") {
+      const response = await fetch(`/api/admin/change-requests/rules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cr),
+      });
+      const res = (await response.json());
+      const heimdall = new Heimdall(res.customDomainUri, [vuid]);
+      await heimdall.openEnclave();
+      const authorizerApproval = await heimdall.getAuthorizerApproval(
+        res.draft,
+        "Rules:1",
+        res.expiry,
+        "base64url"
+      );
+      if (authorizerApproval.draft === res.draft) {
+        if (authorizerApproval.accepted === false) {
+          await fetch("/api/admin/change-requests/rules/authorization", {
+            method: "POST",
+            body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorization: null, rejected: true }),
+          });
+        } else if (authorizerApproval.accepted === true) {
+          const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
+          const data = await createAuthorization(authorizerApproval.data, authorizerAuthentication, "rules");
+
+          await fetch("/api/admin/change-requests/rules/authorization", {
+            method: "POST",
+            body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorization: data.authorization, rejected: false }),
+          });
+        }
+      }
+      heimdall.closeEnclave();
     }
-    heimdall.closeEnclave();
     await fetchUserChangeRequests();
     await fetchRulesChangeRequests();
     setSelectedChangeRequest(null);
   };
 
+  // UPDATED: Commit change request method differentiates based on type.
   const commitChangeRequest = async (cr: ChangeRequest) => {
     const changeRequest: ChangeSetRequest = {
       actionType: cr.actionType,
       changeSetId: cr.draftRecordId,
       changeSetType: cr.changeSetType,
     };
-    await fetch("/api/admin/change-requests/commit", {
-      method: "POST",
-      body: JSON.stringify({ changeRequest: changeRequest }),
-    });
+    if (cr.type === "user") {
+      await fetch("/api/admin/change-requests/commit", {
+        method: "POST",
+        body: JSON.stringify({ changeRequest: changeRequest }),
+      });
+    } else if (cr.type === "rules") {
+      const endpoint = "/api/admin/change-request/rules/saveAndSign";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cr),
+      });
+  
+      if (!res.ok) {
+        throw new Error("Failed to save global settings");
+      }
+    }
     await fetchUserChangeRequests();
     await fetchRulesChangeRequests();
     setSelectedChangeRequest(null);
   };
 
+  // UPDATED: Cancel change request method differentiates based on type.
   const cancelChangeRequest = async (cr: ChangeRequest) => {
     const changeRequest: ChangeSetRequest = {
       actionType: cr.actionType,
       changeSetId: cr.draftRecordId,
       changeSetType: cr.changeSetType,
     };
-    await fetch("/api/admin/change-requests/cancel", {
-      method: "POST",
-      body: JSON.stringify({ changeRequest: changeRequest }),
-    });
+    if (cr.type === "user") {
+      await fetch("/api/admin/change-requests/cancel", {
+        method: "POST",
+        body: JSON.stringify({ changeRequest: changeRequest }),
+      });
+    } else if (cr.type === "rules") {
+      await fetch("/api/admin/change-requests/rules/cancel", {
+        method: "POST",
+        body: JSON.stringify({ id: cr.id }),
+      });
+    }
     await fetchUserChangeRequests();
     await fetchRulesChangeRequests();
     setSelectedChangeRequest(null);
@@ -811,7 +913,7 @@ export default function AdminDashboard() {
                     <UserChangeRequestCard
                       key={cr.draftRecordId}
                       changeRequest={cr}
-                      onSelect={() => setSelectedChangeRequest(cr)}
+                      onSelect={() => setSelectedChangeRequest({...cr, type: "user"})}
                       selected={selectedChangeRequest?.draftRecordId === cr.draftRecordId}
                     />
                   ))
@@ -823,7 +925,7 @@ export default function AdminDashboard() {
                   <RulesChangeRequestCard
                     key={cr.id}
                     changeRequest={cr}
-                    onSelect={() => setSelectedChangeRequest(cr)}
+                    onSelect={() => setSelectedChangeRequest({...cr, type: "rules"})}
                     selected={selectedChangeRequest?.id === cr.id}
                   />
                 ))
@@ -1082,8 +1184,7 @@ const GlobalSettingsModalForRole = ({
   };
 
   const handleSave = () => {
-    const updatedRuleSet = isThreshold ? { ...localRuleSet, ruleSetId: "threshold_rule" } : localRuleSet;
-    const { ruleSetId, ...rest } = updatedRuleSet;
+    const { ruleSetId, ...rest } = localRuleSet;
     onSave({ ruleSetId, ...rest });
   };
 
@@ -1272,4 +1373,3 @@ const UserCreateModal = ({ onClose, onCreate }: UserCreateModalProps) => {
     </div>
   );
 };
-

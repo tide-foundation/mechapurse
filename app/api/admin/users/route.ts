@@ -8,13 +8,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 const allowedRole = [Roles.Admin];
 
-
-// Sample Users Database (Replace with actual DB queries)
-let users = [
-    { id: "1", name: "John Doe", email: "john@example.com", role: "Admin" },
-    { id: "2", name: "Jane Smith", email: "jane@example.com", role: "User" },
-];
-
 export async function GET(req: NextRequest) {
     // Verify authorization token
     const cookieStore = cookies();
@@ -106,7 +99,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
     try {
         const { id } = await req.json();
-        users = users.filter(user => user.id !== id);
+        // users = users.filter((user: { id: string; }) => user.id !== id);
 
         return NextResponse.json({ success: true });
     } catch (error) {

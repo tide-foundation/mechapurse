@@ -155,7 +155,7 @@ export default function Dashboard() {
       await addAdminAuth(draft.id, vuid, data.authorization);
 
       const auths: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
-      const authzList = auths.map((a) => a.adminAuthorization);
+      const authzList = auths.map((a) => a.authorization);
       const sig = await signTxDraft(draft.txBody, authzList, data.ruleSettings, expiry);
 
       const response = await fetch("/api/transaction/send", {

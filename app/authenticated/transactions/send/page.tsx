@@ -40,6 +40,7 @@ export default function Send() {
   };
 
   const addDraftRequest = async (
+    vuid: string,
     txBody: string,
     data: string,
     dataJson: string
@@ -47,7 +48,7 @@ export default function Send() {
     const response = await fetch("/api/transaction/db/AddDraftRequest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ txBody, data, dataJson }),
+      body: JSON.stringify({ vuid, txBody, data, dataJson }),
     });
 
     const resp = await response.json();
@@ -58,12 +59,13 @@ export default function Send() {
   const addAdminAuth = async (
     id: string,
     vuid: string,
-    authorization: string
+    authorization: string,
+    rejected: boolean
   ): Promise<DraftSignRequest> => {
     const response = await fetch("/api/transaction/db/AddAdminAuth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, vuid, authorization }),
+      body: JSON.stringify({ id, vuid, authorization, rejected }),
     });
 
     const resp = await response.json();
@@ -116,7 +118,7 @@ export default function Send() {
       const heimdall = new Heimdall(data.uri, [vuid]);
       const draft = createTxDraft(data.data);
 
-      const draftReq = await addDraftRequest(txbody, draft, data.draftJson);
+      const draftReq = await addDraftRequest(vuid, txbody, draft, data.draftJson);
 
       await heimdall.openEnclave();
       const authApproval = await heimdall.getAuthorizerApproval(
@@ -134,7 +136,7 @@ export default function Send() {
           authApproval.data,
           authzAuthn
         );
-        await addAdminAuth(draftReq.id, vuid, data.authorization);
+        await addAdminAuth(draftReq.id, vuid, data.authorization, true);
 
         const sig = await signTxDraft(
           txbody,
@@ -150,7 +152,18 @@ export default function Send() {
         });
 
         const sentResp = await response.json();
-        if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
+        
+        if (!response.ok) {
+          if (sentResp.error && sentResp.error.includes("THRESHOLD_NOT_MET")) {
+            const thresholdMatch = sentResp.error.match(/threshold:\s*(\d+)/i);
+            const thresholdValue = thresholdMatch && thresholdMatch[1] ? parseInt(thresholdMatch[1], 10) : 0;
+            setSuccessMessage(`Transaction request created, waiting for ${thresholdValue - 1} more approvals.`);
+            return;
+          }
+      
+          // For other errors, throw a generic error.
+          throw new Error(sentResp.error || "Transaction failed");
+        }
 
         setTransactionResult(`TX Hash: ${sentResp.txHash}`);
         setSuccessMessage("Transaction successfully submitted!");
