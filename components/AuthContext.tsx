@@ -6,6 +6,7 @@ import { InitCertResponse } from "@/lib/tidecloakApi";
 
 interface AuthContextType {
     walletAddressHex: string,
+    walletAddress: string,
     isAuthenticated: boolean;
     isLoading: boolean;
     vuid: string;
@@ -29,10 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const getWalletAddress = async () => {
         return await fetch("/api/dashboard?type=wallet", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
         });
-      };
+    };
 
     useEffect(() => {
         const initAuth = async () => {
@@ -40,12 +41,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await IAMService.initIAM(async (authenticated) => {
                 setIsAuthenticated(authenticated);
                 setIsLoading(false);
+
+                if (authenticated) {
+                    const walletResp = await (await getWalletAddress()).json();
+                    const vuidFromToken = IAMService.getVuid();
+                    setVuid(vuidFromToken ?? "");
+                    setWalletAddressHex(walletResp.addressHex ?? "")
+                    setWalletAddress(walletResp.address ?? "")
+
+                }
             });
-            const walletResp = await (await getWalletAddress()).json();
-            const vuidFromToken = IAMService.getVuid();
-            setVuid(vuidFromToken ?? "");
-            setWalletAddressHex(walletResp.addressHex ?? "")
-            setWalletAddress(walletResp.addressHex ?? "")
+
 
         };
         initAuth();
@@ -76,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex  }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex, walletAddress }}>
             {children}
         </AuthContext.Provider>
     );
