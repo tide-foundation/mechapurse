@@ -146,12 +146,12 @@ export async function POST(req: NextRequest) {
         witnesses.set_vkeys(vkeyWitnesses);
 
 
-        const test = TransactionBody.from_bytes(base64ToBytes(txBody));
+        const txBodyBytes = TransactionBody.from_bytes(base64ToBytes(txBody));
 
 
         // create the finalized transaction with witnesses
         const transaction = CardanoWasm.Transaction.new(
-            test,
+            txBodyBytes,
             witnesses,
             undefined, // transaction metadata
         );

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { FaChevronRight } from "react-icons/fa";
 import styles from "@/styles/AdminDashboard.module.css";
 import { RuleSet, RuleDefinition, RuleCondition } from "@/interfaces/interface";
-import { DEFAULT_THRESHOLD_KEY } from "@/app/authenticated/admin/page";
 import { useAuth } from "../AuthContext";
 
 interface SimpleGlobalSettingsModalProps {
@@ -14,6 +13,8 @@ interface SimpleGlobalSettingsModalProps {
     onSave: (ruleSet: RuleSet) => void;
     isThreshold: boolean;
 }
+const DEFAULT_THRESHOLD_KEY = "CardanoTx:1.BlindSig:1";
+
 // --- SimpleGlobalSettingsModal Component ---
 export default function SimpleGlobalSettingsModal({
     roleKey,
@@ -89,39 +90,26 @@ export default function SimpleGlobalSettingsModal({
                 </p>
                 <div className={styles.inputGroup}>
                     <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                        Minimum Allowed Amount
+                        Minimum Allowed Amount (1 ada = 1000000 lovelace)
                     </label>
                     <input
                         type="number"
                         value={minAmount}
                         onChange={(e) => setMinAmount(e.target.value)}
-                        placeholder="e.g., 1000"
+                        placeholder="e.g., 1000000"
                         className={styles.inputField}
                         style={{ fontSize: "1rem", padding: "0.75rem" }}
                     />
                 </div>
                 <div className={styles.inputGroup}>
                     <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                        Maximum Allowed Amount
+                        Maximum Allowed Amount (1 ada = 1000000 lovelace)
                     </label>
                     <input
                         type="number"
                         value={maxAmount}
                         onChange={(e) => setMaxAmount(e.target.value)}
-                        placeholder="e.g., 5000"
-                        className={styles.inputField}
-                        style={{ fontSize: "1rem", padding: "0.75rem" }}
-                    />
-                </div>
-                <div className={styles.inputGroup}>
-                    <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                        Maximum Fee (optional)
-                    </label>
-                    <input
-                        type="number"
-                        value={maxFee}
-                        onChange={(e) => setMaxFee(e.target.value)}
-                        placeholder="e.g., 50"
+                        placeholder="e.g., 5000000"
                         className={styles.inputField}
                         style={{ fontSize: "1rem", padding: "0.75rem" }}
                     />
@@ -141,6 +129,19 @@ export default function SimpleGlobalSettingsModal({
                         />
                     </div>
                 )}
+                <div className={styles.inputGroup}>
+                    <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                        Maximum Fee (optional)
+                    </label>
+                    <input
+                        type="number"
+                        value={maxFee}
+                        onChange={(e) => setMaxFee(e.target.value)}
+                        placeholder="e.g., 50000"
+                        className={styles.inputField}
+                        style={{ fontSize: "1rem", padding: "0.75rem" }}
+                    />
+                </div>
                 {/* <div className={styles.inputGroup}>
                     <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
                         Exclusion Rule

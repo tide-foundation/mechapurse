@@ -15,12 +15,9 @@ export default function Send() {
   const { vuid, createTxDraft, signTxDraft } = useAuth();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
-  const [transactionResult, setTransactionResult] = useState<string | null>(
-    null
-  );
+  const [transactionResult, setTransactionResult] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const createAuthorization = async (
     authorizerApproval: string,
@@ -89,7 +86,6 @@ export default function Send() {
     e.preventDefault();
     setError("");
     setTransactionResult(null);
-    setSuccessMessage("");
     setLoading(true);
 
     if (!recipient.trim()) {
@@ -98,6 +94,7 @@ export default function Send() {
       return;
     }
 
+    // Ensure that the amount is a valid positive number.
     if (!amount.trim() || isNaN(Number(amount)) || Number(amount) <= 0) {
       setError("Amount must be a valid number greater than 0.");
       setLoading(false);
@@ -132,45 +129,51 @@ export default function Send() {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
         heimdall.closeEnclave();
 
-        const data = await createAuthorization(
+        const authData = await createAuthorization(
           authApproval.data,
           authzAuthn
         );
-        await addAdminAuth(draftReq.id, vuid, data.authorization, true);
+        await addAdminAuth(draftReq.id, vuid, authData.authorization, true);
 
         const sig = await signTxDraft(
           txbody,
-          [data.authorization],
-          data.ruleSettings,
-          draftReq.expiry,
+          [authData.authorization],
+          authData.ruleSettings,
+          draftReq.expiry
         );
 
-        const response = await fetch("/api/transaction/send", {
+        // If CSL returns "AUTHORIZATION REQUIRED", show a green approval waiting message.
+        if (sig === "AUTHORIZATION REQUIRED") {
+          setTransactionResult("Transaction request created, waiting approval");
+          return;
+        }
+
+        const sendResponse = await fetch("/api/transaction/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ txBody: txbody, sigBase64: sig }),
         });
 
-        const sentResp = await response.json();
-        
-        if (!response.ok) {
-          if (sentResp.error && sentResp.error.includes("THRESHOLD_NOT_MET")) {
-            const thresholdMatch = sentResp.error.match(/threshold:\s*(\d+)/i);
-            const thresholdValue = thresholdMatch && thresholdMatch[1] ? parseInt(thresholdMatch[1], 10) : 0;
-            setSuccessMessage(`Transaction request created, waiting for ${thresholdValue - 1} more approvals.`);
-            return;
-          }
-      
-          // For other errors, throw a generic error.
+        const sentResp = await sendResponse.json();
+
+        if (!sendResponse.ok) {
           throw new Error(sentResp.error || "Transaction failed");
         }
 
-        setTransactionResult(`TX Hash: ${sentResp.txHash}`);
-        setSuccessMessage("Transaction successfully submitted!");
+        setTransactionResult(`Transaction successfully submitted! TX Hash: ${sentResp.txHash}`);
         await deleteDraftRequest(draftReq.id);
       }
     } catch (err: any) {
-      setError(`⚠️ ${err.message}`);
+      let errorMessage: string;
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err instanceof Error && typeof err.message === 'string') {
+        errorMessage = err.message;
+      } else {
+        errorMessage = String(err);
+      }
+    
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -211,11 +214,7 @@ export default function Send() {
             />
           </div>
 
-          <button
-            type="submit"
-            className="submit-button"
-            disabled={loading}
-          >
+          <button type="submit" className="submit-button" disabled={loading}>
             {loading ? (
               <>
                 <ImSpinner8 className="animate-spin" />
@@ -230,22 +229,36 @@ export default function Send() {
           </button>
         </form>
 
+        {/* Error Message */}
         {error && (
-          <div className="error-message">
-            <FaExclamationTriangle /> <span>{error}</span>
+          <div
+            className="error-message"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "1rem" }}
+          >
+            <FaExclamationTriangle />
+            <span>{error}</span>
           </div>
         )}
 
+        {/* Transaction/Success Message */}
         {transactionResult && (
-          <div className="transaction-result">
-            {successMessage && (
-              <div className="success-message">
-                <FaCheckCircle />
-                <span>{successMessage}</span>
-              </div>
+          <div
+            className="transaction-result"
+            style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}
+          >
+            <div
+              className="success-message"
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "white" }}
+            >
+              <FaCheckCircle />
+              <span>{transactionResult}</span>
+            </div>
+            {transactionResult.includes("TX Hash:") && (
+              <>
+                <h3 className="transaction-preview-title">Transaction Preview:</h3>
+                <pre className="transaction-preview">{transactionResult}</pre>
+              </>
             )}
-            <h3 className="transaction-preview-title">Transaction Preview:</h3>
-            <pre className="transaction-preview">{transactionResult}</pre>
           </div>
         )}
       </div>

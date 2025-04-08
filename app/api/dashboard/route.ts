@@ -1,10 +1,10 @@
+import { NextRequest, NextResponse } from "next/server";
 import { Roles } from "@/app/constants/roles";
 import { getPublicKey } from "@/lib/tidecloakConfig";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { base64UrlToBytes } from "@/lib/tideSerialization";
 import { Transaction, TxInput, TxOutput } from "@/types/Transactions";
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
 
 const allowedRole = [Roles.User, Roles.Admin];
 
@@ -19,14 +19,12 @@ export async function GET(req: NextRequest) {
     // Verify authorization token
     const cookieStore = cookies();
     const token = (await cookieStore).get("kcToken")?.value;
-
     if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const user = await verifyTideCloakToken(token, allowedRole);
     if (!user) throw new Error("Invalid token");
 
-    // Parse query parameters
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const walletAddress = searchParams.get("wallet");
@@ -34,7 +32,6 @@ export async function GET(req: NextRequest) {
     try {
         switch (type) {
             case "wallet":
-                console.log("[DEBUG] Generating Enterprise Wallet Address...");
                 const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
                 const publicKeyHash = publicKey.hash();
                 const enterpriseAddress = CardanoWasm.EnterpriseAddress.new(
@@ -133,7 +130,7 @@ export async function GET(req: NextRequest) {
 
                         return {
                             tx_hash: tx.tx_hash,
-                            amount: (amount / 1_000_000).toFixed(6) + " ADA", // Convert from Lovelace to ADA
+                            amount: (amount / 1_000_000) + " ADA", // Convert from Lovelace to ADA
                             block_time: new Date(tx.tx_timestamp * 1000).toLocaleString(),
                             direction: isSent ? "Sent" : "Received",
                             status: "Success", // Koios does not provide pending info, assuming success

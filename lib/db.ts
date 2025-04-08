@@ -196,7 +196,7 @@ export async function AddAuthorization(cardanoTxRequestId: string, userId: strin
     throw new Error(`Authorization already exists for draft ${cardanoTxRequestId} and user ${userId}`);
   } else {
     await db.run(
-      'INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization, rejected) VALUES (?, ?, ?, ?)',
+      'INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization, rejected) VALUES (?, ?, ?, ?, ?)',
       id,
       userId,
       cardanoTxRequestId,
@@ -285,9 +285,9 @@ export async function DeleteRuleSettingsDraft(id: string): Promise<void> {
  */
 export async function GetRuleSettingsAuthorizationByDraftId(draftId: string): Promise<RuleSettingAuthorization[] | null> {
   const db = await dbPromise;
-  const row = await db.all<RuleSettingAuthorization>('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', draftId);
+  const row = await db.all<RuleSettingAuthorization[]>('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', draftId);
   if (!row) return null;
-  return [row];
+  return row;
 }
 
 /**

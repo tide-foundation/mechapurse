@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createTransactionBuilder } from "@/lib/transactionBuilderConfig";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { Roles } from "@/app/constants/roles";
-import { base64UrlToBytes } from "@/lib/tideSerialization";
-import { getPublicKey, getResource } from "@/lib/tidecloakConfig";
-import { BigNum, Ed25519Signature, FixedTransaction, Vkey } from "@emurgo/cardano-serialization-lib-browser";
-import { base64ToBytes, bytesToBase64 } from "tidecloak-js";
-import { createApprovalURI, createAuthorization, getRealmKeyRules, signTx } from "@/lib/tidecloakApi";
+import { getResource } from "@/lib/tidecloakConfig";
+import { createAuthorization } from "@/lib/tidecloakApi";
 import { cookies } from "next/headers";
-import { routeRoleMapping } from "@/lib/authConfig";
-import { RealmKeyRules, RuleConfiguration } from "@/interfaces/interface";
+import { RuleConfiguration } from "@/interfaces/interface";
 import { GetRuleConfiguration } from "@/lib/db";
 
 const allowedRoles = [Roles.User, Roles.Admin];

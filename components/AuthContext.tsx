@@ -66,8 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
 
-    const signTxDraft = (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
-        return IAMService.signTxDraft(txBody, authorizers, ruleSettings, expiry);
+    const signTxDraft = async (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
+        return await IAMService.signTxDraft(txBody, authorizers, ruleSettings, expiry);
     }
 
     const createRuleSettingsDraft = (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => {

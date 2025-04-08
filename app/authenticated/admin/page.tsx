@@ -57,7 +57,7 @@ const fields = [
 ];
 
 // Reserved key for the global threshold rules (advanced mode only)
-export const DEFAULT_THRESHOLD_KEY = "CardanoTx:1.BlindSig:1";
+const DEFAULT_THRESHOLD_KEY = "CardanoTx:1.BlindSig:1";
 // Display name for threshold rules
 const THRESHOLD_DISPLAY_KEY = "Threshold Rules (CardanoTx1.BlindSig:1)";
 
@@ -289,6 +289,7 @@ export default function AdminDashboard() {
 
   const saveGlobalSettings = async (updatedSettings: RuleSettings) => {
     try {
+
       const res = await fetch("/api/admin/global-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -315,7 +316,6 @@ export default function AdminDashboard() {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
         heimdall.closeEnclave();
         const data = await createAuthorization(authApproval.data, authzAuthn, "rules");
-        console.log(data)
         const threshold = Number(reqDraft.threshold);
       
         if (!isNaN(threshold) && threshold === 1) {
@@ -349,8 +349,7 @@ export default function AdminDashboard() {
             vuid: vuid,
             authorizations: data.authorization,
             rejected: false,
-          };
-      
+          };      
           await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -489,52 +488,56 @@ export default function AdminDashboard() {
     }
   };
 
-  // Save a role-based rule set and update the corresponding threshold rule.
-  const handleModalSave = (updatedRuleSet: RuleSet) => {
-    if (globalSettingsType === "threshold") {
-      const updatedValidationSettings = { ...globalSettings.validationSettings };
-      const currentArray = updatedValidationSettings[DEFAULT_THRESHOLD_KEY] || [];
-      if (isNewRuleSet) {
-        updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = [...currentArray, updatedRuleSet];
-      } else {
-        updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = currentArray.map((rs, idx) =>
-          idx === currentRuleSetIndex ? updatedRuleSet : rs
-        );
-      }
-      setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+const handleModalSave = (updatedRuleSet: RuleSet) => {
+  if (globalSettingsType === "threshold") {
+    const updatedValidationSettings = { ...globalSettings.validationSettings };
+    const currentArray = updatedValidationSettings[DEFAULT_THRESHOLD_KEY] || [];
+    if (isNewRuleSet) {
+      updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = [...currentArray, updatedRuleSet];
     } else {
-      const updatedValidationSettings = { ...globalSettings.validationSettings };
-      const currentArray = updatedValidationSettings[currentKey!] || [];
-      if (isNewRuleSet) {
-        updatedValidationSettings[currentKey!] = [...currentArray, updatedRuleSet];
-      } else {
-        updatedValidationSettings[currentKey!] = currentArray.map((rs, idx) =>
-          idx === currentRuleSetIndex ? updatedRuleSet : rs
-        );
-      }
-      setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
-
-      // Duplicate or update the corresponding threshold rule.
-      if (updatedRuleSet.outputs && updatedRuleSet.outputs.threshold) {
-        const thresholdRuleId = `threshold_rule_${currentKey}`;
-        const newThresholdRule = { ...updatedRuleSet, ruleSetId: thresholdRuleId };
-        let thresholdObj: RuleSet[] = globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY];
-        const existingIndex = thresholdObj.findIndex(r => r.ruleSetId === thresholdRuleId);
-        if (existingIndex !== -1) {
-          thresholdObj[existingIndex] = newThresholdRule;
-        } else {
-          thresholdObj.push(newThresholdRule);
-        }
-        updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = thresholdObj;
-        setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
-      }
+      updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = currentArray.map((rs, idx) =>
+        idx === currentRuleSetIndex ? updatedRuleSet : rs
+      );
     }
-    setUnsavedChanges(true);
-    setGlobalModalOpen(false);
-    setCurrentKey(null);
-    setCurrentRuleSetIndex(null);
-    setIsNewRuleSet(false);
-  };
+    setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+  } else {
+    const updatedValidationSettings = { ...globalSettings.validationSettings };
+    const currentArray = updatedValidationSettings[currentKey!] || [];
+    if (isNewRuleSet) {
+      updatedValidationSettings[currentKey!] = [...currentArray, updatedRuleSet];
+    } else {
+      updatedValidationSettings[currentKey!] = currentArray.map((rs, idx) =>
+        idx === currentRuleSetIndex ? updatedRuleSet : rs
+      );
+    }
+    setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+
+    // Duplicate or update the corresponding threshold rule.
+    if (updatedRuleSet.outputs && updatedRuleSet.outputs.threshold) {
+      const thresholdRuleId = `threshold_rule_${currentKey}`;
+      
+      // Remove any existing ruleSetId property and place our thresholdRuleId first.
+      const { ruleSetId, ...rest } = updatedRuleSet;
+      const newThresholdRule = { ruleSetId: thresholdRuleId, ...rest };
+
+      let thresholdObj: RuleSet[] = globalSettings.validationSettings[DEFAULT_THRESHOLD_KEY];
+      const existingIndex = thresholdObj.findIndex(r => r.ruleSetId === thresholdRuleId);
+      if (existingIndex !== -1) {
+        thresholdObj[existingIndex] = newThresholdRule;
+      } else {
+        thresholdObj.push(newThresholdRule);
+      }
+      updatedValidationSettings[DEFAULT_THRESHOLD_KEY] = thresholdObj;
+      setGlobalSettings({ ...globalSettings, validationSettings: updatedValidationSettings });
+    }
+  }
+  setUnsavedChanges(true);
+  setGlobalModalOpen(false);
+  setCurrentKey(null);
+  setCurrentRuleSetIndex(null);
+  setIsNewRuleSet(false);
+};
+  
 
   const handleGlobalSave = async () => {
     await saveGlobalSettings(globalSettings);
@@ -617,7 +620,7 @@ export default function AdminDashboard() {
 
           await fetch("/api/admin/change-requests/rules/authorization", {
             method: "POST",
-            body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorization: data.authorization, rejected: false }),
+            body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorizations: data.authorization, rejected: false }),
           });
         }
       }
@@ -641,7 +644,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ changeRequest: changeRequest }),
       });
     } else if (cr.type === "rules") {
-      const endpoint = "/api/admin/change-request/rules/saveAndSign";
+      const endpoint = "/api/admin/change-requests/rules/commit";
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -651,6 +654,11 @@ export default function AdminDashboard() {
       if (!res.ok) {
         throw new Error("Failed to save global settings");
       }
+      // remove 
+      await fetch("/api/admin/change-requests/rules/cancel", {
+        method: "POST",
+        body: JSON.stringify({ id: cr.id }),
+      });
     }
     await fetchUserChangeRequests();
     await fetchRulesChangeRequests();
@@ -1185,7 +1193,7 @@ const GlobalSettingsModalForRole = ({
 
   const handleSave = () => {
     const { ruleSetId, ...rest } = localRuleSet;
-    onSave({ ruleSetId, ...rest });
+    onSave({ ...rest, ruleSetId });
   };
 
   return (

@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 });
         }
 
-        await AddRuleSettingsAuthorization(ruleReqDraftId, vuid, JSON.stringify(authorization), rejected);
+        await AddRuleSettingsAuthorization(ruleReqDraftId, vuid, authorization, rejected);
 
         const authorizations: RuleSettingAuthorization[] | null = await GetRuleSettingsAuthorizationByDraftId(ruleReqDraftId);
         
@@ -102,9 +102,7 @@ export async function POST(req: NextRequest) {
                 await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "APPROVED");
               }
               else {
-                console.log("pending!!")
                 await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "PENDING");
-
               }
             }
           }

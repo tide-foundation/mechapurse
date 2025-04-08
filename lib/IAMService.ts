@@ -189,10 +189,16 @@ export const createTxDraft = (txBody: string) => {
 }
 
 export const signTxDraft = async (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => {
-    const tidecloak = getKeycloakClient();
-    if (!tidecloak) { return null; }
+    try {
+        const tidecloak = getKeycloakClient();
+        if (!tidecloak) { return null; }
+    
+        return await tidecloak.signCardanoTx(txBody, authorizers, ruleSettings, expiry);
+        
+    }catch(err){
+        return "AUTHORIZATION REQUIRED"
+    }
 
-    return await tidecloak.signCardanoTx(txBody, authorizers, ruleSettings, expiry);
 }
 
 export const createRuleSettingsDraft = (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => {

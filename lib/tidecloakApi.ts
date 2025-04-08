@@ -268,7 +268,7 @@ export const saveAndSignRules = async (ruleDraft: string, expiry: string, author
     });
     const res = await response.text();
     if (!response.ok) {
-        const errorBody = await response.text();
+        const errorBody = res;
         console.error(`Error saving and signing rules: ${response.statusText}`);
         throw new Error(`Error saving and signing rules: ${errorBody}`);
     }
@@ -459,7 +459,6 @@ export const RemoveUserRole = async (userId: string, roleName: string, token: st
 }
 
 export const AddUser = async (userRep: UserRepresentation, token: string): Promise<void> => {
-    console.log("MADE IT HERE")
     const response = await fetch(`${TC_URL}/users`, {
         method: 'POST',
         headers: {
@@ -623,6 +622,7 @@ export const GetTideLinkUrl = async (userId: string, token: string, redirect_uri
         throw new Error("UserId and token must be provided.");
     }
     
+    console.log(`${TC_URL}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200&redirect_uri=${redirect_uri}&client_id=${CLIENT}`)
     const response = await fetch(`${TC_URL}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200&redirect_uri=${redirect_uri}&client_id=${CLIENT}`, {
         method: 'POST',
         headers: {

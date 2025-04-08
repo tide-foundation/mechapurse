@@ -70,7 +70,7 @@ const UserUpdateModal = ({
   };
 
   const getTideLinkUrl = async () => {
-    const currentUrl = window.location.href;
+    const currentUrl = window.location.origin;
     const encodedUrl = encodeURIComponent(currentUrl);
     const resp = await fetch(`/api/admin/users/tide?userId=${user.id}&redirect_uri=${encodedUrl}`,{
       method: "GET",
