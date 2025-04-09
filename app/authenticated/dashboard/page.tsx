@@ -191,7 +191,6 @@ export default function Dashboard() {
       </div>
       <PendingApprovals
         pendingTransactions={pendingTransactions}
-        prettyJson={prettyJson}
         onReview={handleReview}
         scrollRef={approvalScrollRef}
         onScrollLeft={scrollLeft}

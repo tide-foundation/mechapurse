@@ -102,7 +102,6 @@ export interface RuleDefinition {
     field: string;
     conditions: RuleCondition[];
     aud?: string;
-    output?: { [key: string]: number };
 }
 
 export interface RuleCondition {

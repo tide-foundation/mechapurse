@@ -3,6 +3,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import IAMService from "@/lib/IAMService";
 import { InitCertResponse } from "@/lib/tidecloakApi";
+import { RuleSettings } from "@/interfaces/interface";
+import { TX_MANAGEMENT_CLIENT } from "@/app/constants/client";
 
 interface AuthContextType {
     walletAddressHex: string,
@@ -15,6 +17,15 @@ interface AuthContextType {
     signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
     createRuleSettingsDraft: (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => string;
     signRuleSettingsDraft: (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => Promise<string>;
+    canProcessRequest : (
+        ruleSettings: RuleSettings,
+        draftJson: string
+      ) => Promise<boolean>;
+      processThresholdRules : (
+        ruleSettings: RuleSettings,
+        draftJson: string
+      ) => Promise<{ roles: string[]; threshold: number } | null>;
+
 
 }
 
@@ -75,14 +86,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
 
-    const signRuleSettingsDraft = (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
-        return IAMService.signRuleSettingsDraft(ruleReq, authorizers, ruleSettings, expiry, initCert);
+    const signRuleSettingsDraft = async (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
+        return await IAMService.signRuleSettingsDraft(ruleReq, authorizers, ruleSettings, expiry, initCert);
     }
+
+    const canProcessRequest = async (
+        ruleSettings: any,
+        draftJson: string
+      ): Promise<boolean> => {
+        const result: { roles: string[]; threshold: number } | null =
+          await IAMService.processThresholdRules("CardanoTx:1.BlindSig:1", "threshold_rule", ruleSettings, draftJson);
+        
+        if (result == null) {
+          return false;
+        }
+                return result.roles.some(r => hasRole(r, TX_MANAGEMENT_CLIENT));
+      };
+
+    const processThresholdRules = async (
+        ruleSettings: any, // Replace `any` with your actual type if available, e.g., RuleSettings
+        draftJson: string
+      ): Promise<{ roles: string[]; threshold: number } | null> => {
+        // Call the tidecloak.checkThresholdRule function with the provided parameters.
+        return await IAMService.processThresholdRules("CardanoTx:1.BlindSig:1", "threshold_rule", ruleSettings, draftJson);
+    };
 
 
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex, walletAddress }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex, walletAddress, canProcessRequest, processThresholdRules }}>
             {children}
         </AuthContext.Provider>
     );

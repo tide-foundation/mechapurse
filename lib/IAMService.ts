@@ -2,6 +2,7 @@ import Heimdall, { BaseTideRequest, CardanoTxBodySignRequest, CreateCardanoTxBod
 import kcData from "../tidecloak.json";
 import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
 import { InitCertResponse } from "./tidecloakApi";
+import { RuleSettings } from "@/interfaces/interface";
 
 let _tc: typeof Heimdall | null = null;
 
@@ -198,8 +199,27 @@ export const signTxDraft = async (txBody: string, authorizers: string[], ruleSet
     }catch(err){
         return "AUTHORIZATION REQUIRED"
     }
-
 }
+
+/**
+ * Processes threshold rules using the Tidecloak checkThresholdRule method.
+ *
+ * @param key - The key in the validationSettings where the rule sets are stored (e.g., "CardanoTx:1.BlindSig:1").
+ * @param idSubscript - The substring that must be present in the ruleSetId (e.g., "threshold_rule").
+ * @param ruleSettings - The full rule settings configuration object.
+ * @param draftJson - The JSON string representing the draft transaction.
+ * @returns A Promise that resolves with an object containing the required role and threshold if a rule set passes, or null otherwise.
+ */
+export const processThresholdRules = async (
+    key: string,
+    idSubscript: string,
+    ruleSettings: RuleSettings,
+    draftJson: string
+  ): Promise<{ roles: string[]; threshold: number } | null> => {
+    const tidecloak = getKeycloakClient();
+    if (!tidecloak) { return null; }
+    return await tidecloak.checkThresholdRule(key, idSubscript, ruleSettings, draftJson);
+  };
 
 export const createRuleSettingsDraft = (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => {
     const tidecloak = getKeycloakClient();
@@ -230,7 +250,8 @@ const IAMService = {
     createTxDraft,
     signTxDraft,
     createRuleSettingsDraft,
-    signRuleSettingsDraft
+    signRuleSettingsDraft,
+    processThresholdRules
 };
 
 export default IAMService;

@@ -4,7 +4,6 @@ import { useAuth } from "../AuthContext";
 
 interface PendingApprovalsProps {
     pendingTransactions: DraftSignRequest[];
-    prettyJson: (json: string) => string;
     onReview: (draft: DraftSignRequest) => void;
     scrollRef: React.RefObject<HTMLDivElement | null>;
     onScrollLeft: () => void;

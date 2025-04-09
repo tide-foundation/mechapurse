@@ -758,11 +758,11 @@ const handleModalSave = (updatedRuleSet: RuleSet) => {
                       title={<strong className={styles.validationTitle}>{roleKey}</strong>}
                       expanded={!!expandedKeys[roleKey]}
                       onToggle={() => toggleKeyExpansion(roleKey)}
-                      headerActions={
-                        <button onClick={() => openGlobalRulesForModal(roleKey, null)} className={styles.primaryButton}>
-                          <FaPlus /> Add Rule Set
-                        </button>
-                      }
+                      // headerActions={
+                      //   <button onClick={() => openGlobalRulesForModal(roleKey, null)} className={styles.primaryButton}>
+                      //     <FaPlus /> Add Rule Set
+                      //   </button>
+                      // }
                     >
                       {ruleSets.length > 0 ? (
                         ruleSets.map((rs, index) => (
@@ -1214,7 +1214,7 @@ const GlobalSettingsModalForRole = ({
               type="number"
               value={localRuleSet.outputs?.threshold || ""}
               onChange={(e) =>
-                setLocalRuleSet({ ...localRuleSet, outputs: { threshold: Number(e.target.value) } })
+                setLocalRuleSet({ ruleSetId: "threshold_rule" , ...localRuleSet, outputs: { threshold: Number(e.target.value) }})
               }
               className={styles.inputField}
               placeholder="e.g., 3"
