@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@emurgo/cardano-serialization-lib-browser": "^14.1.1",
+    "@emurgo/cardano-serialization-lib-nodejs": "^14.1.1",
     "@types/sqlite3": "^5.1.0",
     "jose": "^6.0.8",
     "next": "^15.2.4",

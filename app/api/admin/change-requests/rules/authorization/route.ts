@@ -83,9 +83,6 @@ export async function POST(req: NextRequest) {
             const totalRejected = authorizations.filter(auth => auth.rejected).length;
             const threshold = Number(await getAdminThreshold(token));
 
-            console.log(threshold)
-            console.log(isNaN(threshold))
-
             if (!isNaN(threshold)) {
               const estimatedTotalAdmins = estimateTotalAdmins(threshold, 0.7);
               const votesReceived = totalApprovals + totalRejected;

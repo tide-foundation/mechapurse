@@ -364,8 +364,6 @@ export const addAuthorizerInfo = async (roleId: string, authInfo: AuthorizerInfo
 };
 
 export const getClientRoleByName = async (roleName: string, clientuuid: string, token: string): Promise<RoleRepresentation> => {
-    console.log(`Fetching client role by name: ${roleName} for client uuid: ${clientuuid}`);
-
     const response = await fetch(`${TC_URL}/clients/${clientuuid}/roles/${roleName}`, {
         method: 'GET',
         headers: {
@@ -621,8 +619,6 @@ export const GetTideLinkUrl = async (userId: string, token: string, redirect_uri
     if (!userId || !token) {
         throw new Error("UserId and token must be provided.");
     }
-    
-    console.log(`${TC_URL}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200&redirect_uri=${redirect_uri}&client_id=${CLIENT}`)
     const response = await fetch(`${TC_URL}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200&redirect_uri=${redirect_uri}&client_id=${CLIENT}`, {
         method: 'POST',
         headers: {

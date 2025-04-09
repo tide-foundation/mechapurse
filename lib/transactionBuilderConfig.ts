@@ -1,3 +1,5 @@
+import { loadCardanoWasm } from "@/config/cardanoWasmConfig";
+
 const protocolParams = {
     linearFee: {
         minFeeA: "44",
@@ -15,7 +17,7 @@ const protocolParams = {
 
 // Function to create and return a configured TransactionBuilder instance
 export async function createTransactionBuilder() {
-    const CardanoWasm = await import("@emurgo/cardano-serialization-lib-browser"); // Dynamic import
+    const CardanoWasm = await loadCardanoWasm() // Dynamic import
 
     // Define the linear fee parameters
     const linearFee = CardanoWasm.LinearFee.new(
@@ -30,7 +32,7 @@ export async function createTransactionBuilder() {
         .key_deposit(CardanoWasm.BigNum.from_str(protocolParams.keyDeposit))
         .max_value_size(protocolParams.maxValSize)
         .max_tx_size(protocolParams.maxTxSize)
-        .coins_per_utxo_byte(CardanoWasm.BigNum.from_str(protocolParams.coinsPerUtxoByte)) // Updated parameter
+        .coins_per_utxo_byte(CardanoWasm.BigNum.from_str(protocolParams.coinsPerUtxoByte))
         .prefer_pure_change(true)
         .build();
 
