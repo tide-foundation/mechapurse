@@ -114,12 +114,12 @@ export async function GET(req: NextRequest) {
                 break;
             }
 
-            case "8": {
-                clearRealmName();
-                log = "🎉 Setup complete!";
-                saveSetupStep(Number(step));
-                break;
-            }
+            // case "8": {
+            //     clearRealmName();
+            //     log = "🎉 Setup complete!";
+            //     saveSetupStep(Number(step));
+            //     break;
+            // }
 
             default:
                 return NextResponse.json({ error: "Invalid step." }, { status: 400 });
