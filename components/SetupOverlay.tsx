@@ -11,7 +11,7 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
   const [waitingForUser, setWaitingForUser] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-  const totalSteps = 7;
+  const totalSteps = 8;
 
   useEffect(() => {
     const runSetup = async () => {
@@ -75,6 +75,17 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
 
     try {
       for (let step = 7; step <= totalSteps; step++) {
+        const checkUserValid = await fetch(`/api/setup/validate-user`);
+        const checkUserValidMsg = await checkUserValid.json();
+
+        if (!checkUserValid.ok) throw new Error(checkUserValidMsg.error || `Step ${step} failed`);
+        if(!checkUserValidMsg.success) { 
+          setWaitingForUser(true);
+          setLog((prev) => [...prev, "You have not linked your account, click on the link below to continue."]);
+          setCurrentStep(6);
+          return;
+        }
+        
         const res = await fetch(`/api/setup?step=${step}`);
         const data = await res.json();
 

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { getRealmName } from "@/lib/realmStore";
-import { getAdminToken } from "@/lib/TidecloakInitRealm";
+import { getRealmName } from "@/lib/setup/realmStore";
+import { getAdminToken } from "@/lib/setup/TidecloakInitRealm";
 import path from "path";
 import fs from "fs";
+
+const TIDECLOAK_LOCAL_URL = process.env.TIDECLOAK_LOCAL_URL
 
 export async function GET() {
     try {
@@ -11,7 +13,7 @@ export async function GET() {
 
         // Load user info — assuming username is always 'admin'
         const res = await fetch(
-            `https://staging.dauth.me/admin/realms/${realm}/users?username=admin`,
+            `${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/users?username=admin`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,

@@ -8,12 +8,13 @@ import {
     approveAndCommitClients,
     createTestUser,
     fetchAdapterConfig,
-} from "@/lib/TidecloakInitRealm";
+} from "@/lib/setup/TidecloakInitRealm";
 import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { saveRealmName, getRealmName, clearRealmName } from "@/lib/realmStore";
-import { saveSetupStep, getSetupStep, clearSetupStep } from "@/lib/setupProgress";
+import { saveRealmName, getRealmName, clearRealmName } from "@/lib/setup/realmStore";
+import { saveSetupStep, getSetupStep, clearSetupStep } from "@/lib/setup/setupProgress";
+import { approveAndCommitUsers } from "@/lib/setup/TidecloakInitRealm";
 
 
 const tidecloakPath = path.resolve("tidecloak.json");
@@ -105,8 +106,15 @@ export async function GET(req: NextRequest) {
                 saveSetupStep(Number(step));
                 break;
             }
-
             case "7": {
+                const realm = getRealmName();
+                await approveAndCommitUsers(token, realm);
+                log = "✅ User context approved and committed.";
+                saveSetupStep(Number(step));
+                break;
+            }
+
+            case "8": {
                 const realm = getRealmName();
                 await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
                 log = "📥 Adapter config fetched and saved.";
