@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
                 const realm = getRealmName();
                 await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
                 log = "📥 Adapter config fetched and saved.";
-                saveSetupStep(Number(step));
+                clearSetupStep();
                 break;
             }
 
