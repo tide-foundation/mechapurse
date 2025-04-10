@@ -11,7 +11,7 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
   const [waitingForUser, setWaitingForUser] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-  const totalSteps = 8;
+  const totalSteps = 9;
 
   useEffect(() => {
     const runSetup = async () => {
@@ -27,10 +27,20 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
         }
 
         if (data0.paused) {
+          const res = await fetch(`/api/setup?step=7`);
+          const data = await res.json();
+          const match = data.log.match(/https?:\/\/\S+/);
+          const link = match ? match[0] : null;
+          if (link) {
+            setInviteLink(link);
+            setWaitingForUser(true);
+          }
           // If paused, set to waiting state and exit early.
-          setCurrentStep(6);
+          setCurrentStep(7);
           setWaitingForUser(true);
           setReady(true);
+          setLog((prev) => [...prev, `✅ ${data.log}`]);
+
           return;
         }
 
@@ -50,8 +60,8 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
 
           setLog((prev) => [...prev, `✅ ${data.log}`]);
 
-          // At step 6, check for an invite link in the log
-          if (step === 6 && data.log.includes("Invite link")) {
+          // At step 7, check for an invite link in the log
+          if (step === 7 && data.log.includes("Invite link")) {
             const match = data.log.match(/https?:\/\/\S+/);
             const link = match ? match[0] : null;
             if (link) {
@@ -76,23 +86,23 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
 
   const handleContinue = async () => {
     setWaitingForUser(false);
-    setCurrentStep(7);
+    setCurrentStep(8);
 
     try {
-      for (let step = 7; step <= totalSteps; step++) {
+      for (let step = 8; step <= totalSteps; step++) {
         const checkUserValid = await fetch(`/api/setup/validate-user`);
         const checkUserValidMsg = await checkUserValid.json();
 
         if (!checkUserValid.ok)
           throw new Error(checkUserValidMsg.error || `Step ${step} failed`);
 
-        if (!checkUserValidMsg.success) { 
+        if (!checkUserValidMsg.success) {
           setWaitingForUser(true);
           setLog((prev) => [...prev, "You have not linked your account, click on the link below to continue."]);
-          setCurrentStep(6);
+          setCurrentStep(7);
           return;
         }
-        
+
         const res = await fetch(`/api/setup?step=${step}`);
         const data = await res.json();
 

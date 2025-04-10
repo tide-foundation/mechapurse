@@ -188,6 +188,20 @@ export async function createAdminUser(token: string, realm: string) {
     const users = await userRes.json();
     const userId = users[0].id;
 
+    await GrantUserRole(userId, realm, Roles.Admin, token)
+}
+
+export async function getAdminUserInviteLink(token: string, realm: string) {
+    const userRes = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/users?username=admin`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+    });
+
+    const users = await userRes.json();
+    const userId = users[0].id;
+
     const inviteRes = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/tideAdminResources/get-required-action-link?userId=${userId}&lifespan=43200`, {
         method: "POST",
         headers: {
@@ -196,8 +210,6 @@ export async function createAdminUser(token: string, realm: string) {
         },
         body: JSON.stringify(["link-tide-account-action"]),
     });
-
-    await GrantUserRole(userId, realm, Roles.Admin, token)
 
     return inviteRes.text();
 }

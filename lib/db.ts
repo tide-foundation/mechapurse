@@ -1,20 +1,58 @@
-import sqlite3 from 'sqlite3';
-import { ISqlite, IMigrate, open } from 'sqlite';
-import { DraftSignRequest, AdminAuthorizationPack, RuleConfiguration, RuleSettingDraft, RuleSettingAuthorization } from '@/interfaces/interface';
+import Database from 'better-sqlite3';
+import {
+  DraftSignRequest,
+  AdminAuthorizationPack,
+  RuleConfiguration,
+  RuleSettingDraft,
+  RuleSettingAuthorization,
+} from '@/interfaces/interface';
 
-// Open (or create) a database file named "database.sqlite"
-const dbPromise = open({
-  filename: './database.sqlite',
-  driver: sqlite3.Database,
-});
+const db = new Database('./database.sqlite');
 
-/**
- * Initializes the database by creating necessary tables if they don't exist.
- */
-async function initializeDatabase() {
-  const db = await dbPromise;
+// Row Types
 
-  await db.exec(`
+type RuleSettingsRow = {
+  id: string;
+  rules: string;
+  rulesCert: string;
+};
+
+type CardanoTxRequestRow = {
+  id: string;
+  userId: string;
+  txBody: string;
+  draft: string;
+  draftJson: string;
+  expiry: string;
+};
+
+type CardanoTxAuthorizationRow = {
+  id: string;
+  userId: string;
+  cardanoTxRequestId: string;
+  authorization: string;
+  rejected: number;
+};
+
+type RuleSettingsDraftRow = {
+  id: string;
+  userId: string;
+  ruleReqDraft: string;
+  ruleReqDraftJson: string;
+  expiry: string;
+  status: string;
+};
+
+type RuleSettingsAuthorizationRow = {
+  id: string;
+  userId: string;
+  ruleSettingsDraftId: string;
+  authorization: string;
+  rejected: number;
+};
+
+export function initializeDatabase() {
+  db.exec(`
     CREATE TABLE IF NOT EXISTS cardanoTxRequests (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -23,9 +61,7 @@ async function initializeDatabase() {
       draftJson TEXT,
       expiry TEXT
     );
-  `);
 
-  await db.exec(`
     CREATE TABLE IF NOT EXISTS cardanoTxAuthorizations (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -34,17 +70,13 @@ async function initializeDatabase() {
       rejected BOOLEAN,
       FOREIGN KEY (cardanoTxRequestId) REFERENCES cardanoTxRequests(id) ON DELETE CASCADE
     );
-  `);
 
-  await db.exec(`
     CREATE TABLE IF NOT EXISTS ruleSettings (
       id TEXT PRIMARY KEY,
       rules TEXT,
       rulesCert TEXT
     );
-  `);
 
-  await db.exec(`
     CREATE TABLE IF NOT EXISTS ruleSettingsDraft (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -53,11 +85,7 @@ async function initializeDatabase() {
       expiry TEXT,
       status TEXT DEFAULT 'DRAFT'
     );
-  `);
-  
-  
 
-  await db.exec(`
     CREATE TABLE IF NOT EXISTS ruleSettingsAuthorization (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -71,266 +99,120 @@ async function initializeDatabase() {
   console.log("SQLite database initialized: 'cardanoTxRequests', 'cardanoTxAuthorizations','ruleSettings' and 'ruleSettingsDraft' tables are ready.");
 }
 
-initializeDatabase().catch((err) => {
-  console.error("Failed to initialize database:", err);
-});
-
-export { dbPromise, initializeDatabase };
-
-export async function GetRuleConfiguration(): Promise<RuleConfiguration | null> {
-  const db = await dbPromise;
-  const row = await db.get('SELECT * FROM ruleSettings');
-
+export function GetRuleConfiguration(): RuleConfiguration | null {
+  const row = db.prepare('SELECT * FROM ruleSettings').get() as RuleSettingsRow | undefined;
   if (!row) return null;
 
   return {
     id: row.id,
     ruleConfig: {
       rules: JSON.parse(row.rules),
-      rulesCert: row.rulesCert
-    }
+      rulesCert: row.rulesCert,
+    },
   };
 }
 
-export async function AddRuleConfiguration(ruleConfig: string, ruleConfigCert: string): Promise<void> {
-  const db = await dbPromise;
+export function AddRuleConfiguration(ruleConfig: string, ruleConfigCert: string): void {
   const id = crypto.randomUUID();
-  const existingRule = await GetRuleConfiguration();
+  const existing = GetRuleConfiguration();
 
-  if (existingRule && existingRule.id) {
-    await db.run(
-      'UPDATE ruleSettings SET rules = ?, rulesCert = ? WHERE id = ?',
-      ruleConfig,
-      ruleConfigCert,
-      existingRule.id
-    );
+  if (existing?.id) {
+    db.prepare('UPDATE ruleSettings SET rules = ?, rulesCert = ? WHERE id = ?').run(ruleConfig, ruleConfigCert, existing.id);
   } else {
-    await db.run(
-      'INSERT INTO ruleSettings (id, rules, rulesCert) VALUES (?, ?, ?)',
-      id,
-      ruleConfig,
-      ruleConfigCert
-    );
+    db.prepare('INSERT INTO ruleSettings (id, rules, rulesCert) VALUES (?, ?, ?)').run(id, ruleConfig, ruleConfigCert);
   }
 }
 
-export async function GetAllDraftSignRequests(): Promise<DraftSignRequest[]> {
-  const db = await dbPromise;
-  const rows = await db.all<DraftSignRequest[]>('SELECT * FROM cardanoTxRequests');
-  return rows;
+export function GetAllDraftSignRequests(): DraftSignRequest[] {
+  return db.prepare('SELECT * FROM cardanoTxRequests').all() as DraftSignRequest[];
 }
 
-export async function GetDraftSignRequest(id: string): Promise<DraftSignRequest | null> {
-  const db = await dbPromise;
-  const row = await db.get<DraftSignRequest>('SELECT draft FROM cardanoTxRequests WHERE id = ?', id);
+export function GetDraftSignRequest(id: string): DraftSignRequest | null {
+  const row = db.prepare('SELECT draft FROM cardanoTxRequests WHERE id = ?').get(id) as DraftSignRequest | undefined;
   return row || null;
 }
 
-export async function GetDraftSignRequestAuthorizations(requestId: string): Promise<AdminAuthorizationPack[]> {
-  const db = await dbPromise;
-  const rows = await db.all<AdminAuthorizationPack[]>(
-    'SELECT authorization FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ?',
-    requestId
-  );
-  return rows;
+export function GetDraftSignRequestAuthorizations(requestId: string): AdminAuthorizationPack[] {
+  return db.prepare('SELECT authorization FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ?').all(requestId) as AdminAuthorizationPack[];
 }
 
-export async function GetDraftSignRequestByUser(requestId: string, userId: string): Promise<AdminAuthorizationPack | null> {
-  const db = await dbPromise;
-  const rows = await db.all<AdminAuthorizationPack[]>(
-    'SELECT authorization FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ? AND userId = ?',
-    requestId,
-    userId
-  );
-  return rows[0] || null;
+export function GetDraftSignRequestByUser(requestId: string, userId: string): AdminAuthorizationPack | null {
+  const row = db.prepare('SELECT authorization FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ? AND userId = ?').get(requestId, userId) as AdminAuthorizationPack | undefined;
+  return row || null;
 }
 
-// export const UpdateTxDraftStatusById = async (id: string, newStatus: string) => {
-//   const db = await dbPromise;
-
-//   await db.run(
-//     `UPDATE cardanoTxRequests
-//      SET status = ?
-//      WHERE id = ?;`,
-//     [newStatus, id]
-//   );
-// };
-
-export async function AddDraftSignRequest(userId: string,txBody: string, draft: string, draftJson: string): Promise<DraftSignRequest> {
-  const db = await dbPromise;
+export function AddDraftSignRequest(userId: string, txBody: string, draft: string, draftJson: string): DraftSignRequest {
   const id = crypto.randomUUID();
-  const date = new Date();
-  const expiry = (
-    Math.floor(date.getTime() / 1000) +
-    7 * 24 * 60 * 60
-  ).toString(); // 1 week later
+  const expiry = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60).toString();
 
+  db.prepare('INSERT INTO cardanoTxRequests (id, userId, txBody, draft, draftJson, expiry) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, userId, txBody, draft, draftJson, expiry);
 
-  await db.run(
-    'INSERT INTO cardanoTxRequests (id, userId, txBody, draft, draftJson, expiry) VALUES (?, ?, ?, ?, ?, ?)',
-    id,
-    userId,
-    txBody,
-    draft,
-    draftJson,
-    expiry
-  );
-
-  return {
-    id,
-    userId,
-    txBody,
-    draft,
-    draftJson,
-    expiry: expiry,
-  };
+  return { id, userId, txBody, draft, draftJson, expiry };
 }
 
-export async function AddAuthorization(cardanoTxRequestId: string, userId: string, authorization: string, rejected: boolean) {
-  const db = await dbPromise;
+export function AddAuthorization(cardanoTxRequestId: string, userId: string, authorization: string, rejected: boolean): void {
+  const existing = GetDraftSignRequestByUser(cardanoTxRequestId, userId);
+  if (existing) throw new Error(`Authorization already exists for draft ${cardanoTxRequestId} and user ${userId}`);
+
   const id = crypto.randomUUID();
-  const existingAuth = await GetDraftSignRequestByUser(cardanoTxRequestId, userId);
-  const isRejected = rejected ? 1 : 0;
-
-  if (existingAuth) {
-    throw new Error(`Authorization already exists for draft ${cardanoTxRequestId} and user ${userId}`);
-  } else {
-    await db.run(
-      'INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization, rejected) VALUES (?, ?, ?, ?, ?)',
-      id,
-      userId,
-      cardanoTxRequestId,
-      authorization,
-      isRejected
-    );
-  }
+  db.prepare('INSERT INTO cardanoTxAuthorizations (id, userId, cardanoTxRequestId, authorization, rejected) VALUES (?, ?, ?, ?, ?)')
+    .run(id, userId, cardanoTxRequestId, authorization, rejected ? 1 : 0);
 }
 
-export async function DeleteDraftSignRequest(id: string) {
-  const db = await dbPromise;
-  await db.run('DELETE FROM cardanoTxRequests WHERE id = ?', id);
+export function DeleteDraftSignRequest(id: string): void {
+  db.prepare('DELETE FROM cardanoTxRequests WHERE id = ?').run(id);
 }
 
-export async function DeleteAuthorization(id: string) {
-  const db = await dbPromise;
-  await db.run('DELETE FROM cardanoTxAuthorizations WHERE id = ?', id);
+export function DeleteAuthorization(id: string): void {
+  db.prepare('DELETE FROM cardanoTxAuthorizations WHERE id = ?').run(id);
 }
 
-/**
- * Retrieves the current rule settings draft.
- */
-export async function GetRuleSettingsDraft(): Promise<[RuleSettingDraft] | null> {
-  const db = await dbPromise;
-  const row = await db.all<[RuleSettingDraft] | null>('SELECT * FROM ruleSettingsDraft');
-  if (!row) return null;
-  return row;
+export function GetRuleSettingsDraft(): RuleSettingDraft[] | null {
+  const rows = db.prepare('SELECT * FROM ruleSettingsDraft').all() as RuleSettingDraft[];
+  return rows.length ? rows : null;
 }
 
-export async function GetRuleSettingsDraftById(id: string): Promise<RuleSettingDraft | null> {
-  const db = await dbPromise;
-  const row = await db.get('SELECT * FROM ruleSettingsDraft WHERE id = ?', id);
-  if (!row) return null;
-  return {
-    id: row.id,
-    userId: row.userId,
-    ruleReqDraft: row.ruleReqDraft,
-    ruleReqDraftJson: row.ruleReqDraftJson,
-    expiry: row.expiry,
-    status: row.status
-
-  };
+export function GetRuleSettingsDraftById(id: string): RuleSettingDraft | null {
+  return db.prepare('SELECT * FROM ruleSettingsDraft WHERE id = ?').get(id) as RuleSettingDraft | null;
 }
 
-export const UpdateRuleSettingDraftStatusById = async (id: string, newStatus: string) => {
-  const db = await dbPromise;
+export function UpdateRuleSettingDraftStatusById(id: string, newStatus: string): void {
+  db.prepare('UPDATE ruleSettingsDraft SET status = ? WHERE id = ?').run(newStatus, id);
+}
 
-  await db.run(
-    `UPDATE ruleSettingsDraft
-     SET status = ?
-     WHERE id = ?;`,
-    [newStatus, id]
-  );
-};
-
-export async function AddRuleSettingsDraft(userId: string,ruleReqDraft: string, ruleReqDraftJson: string): Promise<RuleSettingDraft| null> {
-  const db = await dbPromise;
+export function AddRuleSettingsDraft(userId: string, ruleReqDraft: string, ruleReqDraftJson: string): RuleSettingDraft | null {
   const id = crypto.randomUUID();
-  const date = new Date();
-  const expiry = (
-    Math.floor(date.getTime() / 1000) +
-    7 * 24 * 60 * 60
-  ).toString(); // 1 week later
+  const expiry = (Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60).toString();
 
-  await db.run(
-    'INSERT INTO ruleSettingsDraft (id, userId, ruleReqDraft, ruleReqDraftJson, expiry) VALUES (?, ?, ?, ?, ?)',
-    id,
-    userId,
-    ruleReqDraft,
-    ruleReqDraftJson,
-    expiry
-  );
-  return await GetRuleSettingsDraftById(id);
+  db.prepare('INSERT INTO ruleSettingsDraft (id, userId, ruleReqDraft, ruleReqDraftJson, expiry) VALUES (?, ?, ?, ?, ?)')
+    .run(id, userId, ruleReqDraft, ruleReqDraftJson, expiry);
+
+  return GetRuleSettingsDraftById(id);
 }
 
-/**
- * Deletes a rule settings draft by its id.
- */
-export async function DeleteRuleSettingsDraft(id: string): Promise<void> {
-  const db = await dbPromise;
-  await db.run('DELETE FROM ruleSettingsDraft WHERE id = ?', id);
+export function DeleteRuleSettingsDraft(id: string): void {
+  db.prepare('DELETE FROM ruleSettingsDraft WHERE id = ?').run(id);
 }
 
-/**
- * Retrieves a specific rule settings authorization by its primary id.
- */
-export async function GetRuleSettingsAuthorizationByDraftId(draftId: string): Promise<RuleSettingAuthorization[] | null> {
-  const db = await dbPromise;
-  const row = await db.all<RuleSettingAuthorization[]>('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', draftId);
-  if (!row) return null;
-  return row;
+export function GetRuleSettingsAuthorizationByDraftId(draftId: string): RuleSettingAuthorization[] | null {
+  const rows = db.prepare('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?').all(draftId) as RuleSettingAuthorization[];
+  return rows.length ? rows : null;
 }
 
-/**
- * Retrieves all rule settings authorizations for a given rule settings draft.
- */
-export async function GetRuleSettingsAuthorizationsByDraft(ruleSettingsDraftId: string): Promise<RuleSettingAuthorization[]> {
-  const db = await dbPromise;
-  const rows = await db.all<RuleSettingAuthorization[]>('SELECT id, userId, authorization FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?', ruleSettingsDraftId);
-  return rows;
+export function GetRuleSettingsAuthorizationsByDraft(ruleSettingsDraftId: string): RuleSettingAuthorization[] {
+  return db.prepare('SELECT id, userId, authorization FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ?').all(ruleSettingsDraftId) as RuleSettingAuthorization[];
 }
 
-/**
- * Creates a new rule settings authorization or updates an existing one for a given draft and user.
- */
-export async function AddRuleSettingsAuthorization(ruleSettingsDraftId: string, userId: string, authorization: string, rejected: boolean): Promise<void> {
-  const db = await dbPromise;
-  // Check if an authorization for this draft and user already exists.
-  const existingAuth = await db.get(
-    'SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ? AND userId = ?',
-    ruleSettingsDraftId,
-    userId
-  );
-  const isRejected = rejected ? 1 : 0;
+export function AddRuleSettingsAuthorization(ruleSettingsDraftId: string, userId: string, authorization: string, rejected: boolean): void {
+  const existing = db.prepare('SELECT * FROM ruleSettingsAuthorization WHERE ruleSettingsDraftId = ? AND userId = ?').get(ruleSettingsDraftId, userId);
+  if (existing) throw new Error(`Authorization already exists for draft ${ruleSettingsDraftId} and user ${userId}`);
 
-  if (existingAuth) {
-    throw new Error(`Authorization already exists for draft ${ruleSettingsDraftId} and user ${userId}`);
-  } else {
-    const id = crypto.randomUUID();
-    await db.run(
-      'INSERT INTO ruleSettingsAuthorization (id, userId, ruleSettingsDraftId, authorization, rejected) VALUES (?, ?, ?, ?, ?)',
-      id,
-      userId,
-      ruleSettingsDraftId,
-      authorization,
-      isRejected
-    );
-  }
+  const id = crypto.randomUUID();
+  db.prepare('INSERT INTO ruleSettingsAuthorization (id, userId, ruleSettingsDraftId, authorization, rejected) VALUES (?, ?, ?, ?, ?)')
+    .run(id, userId, ruleSettingsDraftId, authorization, rejected ? 1 : 0);
 }
 
-/**
- * Deletes a rule settings authorization by its primary id.
- */
-export async function DeleteRuleSettingsAuthorization(id: string): Promise<void> {
-  const db = await dbPromise;
-  await db.run('DELETE FROM ruleSettingsAuthorization WHERE id = ?', id);
+export function DeleteRuleSettingsAuthorization(id: string): void {
+  db.prepare('DELETE FROM ruleSettingsAuthorization WHERE id = ?').run(id);
 }

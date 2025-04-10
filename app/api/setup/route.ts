@@ -8,6 +8,7 @@ import {
     approveAndCommitClients,
     createAdminUser,
     fetchAdapterConfig,
+    getAdminUserInviteLink,
 } from "@/lib/setup/TidecloakInitRealm";
 import fs from "fs";
 import path from "path";
@@ -28,9 +29,9 @@ export async function GET(req: NextRequest) {
         if (step === "0") {
             // Check progress
             const current = getSetupStep();
-            if (current >= 6) {
+            if (current >= 7) {
                 return NextResponse.json({
-                    message: "⏳ Setup paused after step 6, waiting for user to link account.",
+                    message: "⏳ Setup paused after step 7, waiting for user to link account.",
                     paused: true,
                     done: false,
                 });
@@ -38,13 +39,16 @@ export async function GET(req: NextRequest) {
 
             // Check if setup was completed by checking tidecloak.json
             try {
-                const config = (await import("../../../tidecloak.json")) as Record<string, any>;
+                const raw = fs.readFileSync(tidecloakPath, "utf-8");
+                const config = JSON.parse(raw);
                 const required = ["jwk", "vendorId", "homeOrkUrl"];
                 const hasAll = required.every((key) => config[key]);
                 if (hasAll) {
                     return NextResponse.json({ message: "✅ Setup already completed.", done: true });
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.warn("Could not load tidecloak.json:", e);
+            }
 
             return NextResponse.json({ message: "🧪 Setup required.", done: false });
         }
@@ -101,13 +105,21 @@ export async function GET(req: NextRequest) {
 
             case "6": {
                 const realm = getRealmName();
-                inviteLink = await createAdminUser(token, realm);
-                log = `👤 User created. Invite link: ${inviteLink}`;
+                await createAdminUser(token, realm);
+                log = `👤 User created.`;
                 saveSetupStep(Number(step));
                 break;
             }
 
             case "7": {
+                const realm = getRealmName();
+                inviteLink = await getAdminUserInviteLink(token, realm);
+                log = `👤 Requesting user to link tide account. Invite link: ${inviteLink}`;
+                saveSetupStep(Number(step));
+                break;
+            }
+
+            case "8": {
                 const realm = getRealmName();
                 await approveAndCommitUsers(token, realm);
                 log = "✅ User context approved and committed.";
@@ -115,7 +127,7 @@ export async function GET(req: NextRequest) {
                 break;
             }
 
-            case "8": {
+            case "9": {
                 const realm = getRealmName();
                 await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
                 log = "📥 Adapter config fetched and saved.";
