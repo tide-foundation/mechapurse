@@ -8,6 +8,10 @@
     "roles": {
         "realm": [
             {
+                "name": "appUser",
+                "description": "Standard application user"
+            },
+            {
                 "name": "_tide_dob.selfencrypt",
                 "description": "Tide E2EE self-encrypt DoB data"
             },
@@ -22,7 +26,8 @@
                 "composites": {
                     "realm": [
                         "_tide_dob.selfencrypt",
-                        "_tide_dob.selfdecrypt"
+                        "_tide_dob.selfdecrypt",
+                        "appUser"
                     ]
                 }
             }
