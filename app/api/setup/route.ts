@@ -109,19 +109,19 @@ export async function GET(req: NextRequest) {
 
             case "7": {
                 const realm = getRealmName();
-                await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
-                log = "📥 Adapter config fetched and saved.";
+                await approveAndCommitUsers(token, realm);
+                log = "✅ User context approved and committed.";
                 saveSetupStep(Number(step));
                 break;
             }
+
             case "8": {
                 const realm = getRealmName();
-                await approveAndCommitUsers(token, realm);
-                log = "✅ User context approved and committed.";
+                await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
+                log = "📥 Adapter config fetched and saved.";
                 clearSetupStep();
                 break;
             }
-
 
             // case "8": {
             //     clearRealmName();
@@ -131,11 +131,13 @@ export async function GET(req: NextRequest) {
             // }
 
             default:
+                clearSetupStep();
                 return NextResponse.json({ error: "Invalid step." }, { status: 400 });
         }
 
         return NextResponse.json({ success: true, step: Number(step), log });
     } catch (error: any) {
+        clearSetupStep();
         return NextResponse.json({ error: error.message || "Unknown setup error" }, { status: 500 });
     }
 }
