@@ -10,7 +10,7 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
     const [waitingForUser, setWaitingForUser] = useState(false);
     const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-    const totalSteps = 8;
+    const totalSteps = 7;
 
     useEffect(() => {
         const runSetup = async () => {
