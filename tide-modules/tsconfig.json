@@ -6,24 +6,16 @@
     "outDir": "./modules",
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": ["ESNext"],
     "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": false,
-    "jsx": "react",
-    "baseUrl": "../../"
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": [],
+    "noEmit": false
   },
-  "include": [
-    "./**/*.js"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.js"
-  ]
+  "include": ["modules/**/*.js"],
+  "exclude": ["node_modules", "**/*.test.js"]
 }
