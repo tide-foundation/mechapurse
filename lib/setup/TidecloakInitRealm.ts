@@ -1,8 +1,12 @@
 // tideSetup.ts
 import fs from "fs";
 import path from "path";
+import { Roles } from "@/app/constants/roles";
+import { TX_MANAGEMENT_CLIENT } from "@/app/constants/client";
+import { ClientRepresentation, RoleRepresentation } from "../keycloakTypes";
 
-const TIDECLOAK_LOCAL_URL = process.env.TIDECLOAK_LOCAL_URL;
+const TIDECLOAK_LOCAL_URL = process.env.TIDECLOAK_LOCAL_URL ?? "http://localhost:8080"
+const REALM_MGMT = "realm-management";
 
 export async function getAdminToken() {
     const response = await fetch(`${TIDECLOAK_LOCAL_URL}/realms/master/protocol/openid-connect/token`, {
@@ -22,7 +26,6 @@ export async function getAdminToken() {
 
 export async function createRealm(token: string, realmJsonPath: string) {
     const realmJson = fs.readFileSync(realmJsonPath, "utf-8");
-    console.log("Realm JSON:", realmJson);
 
     const response = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms`, {
         method: "POST",
@@ -155,7 +158,7 @@ export async function approveAndCommitUsers(token: string, realm: string) {
     }
 }
 
-export async function createTestUser(token: string, realm: string) {
+export async function createAdminUser(token: string, realm: string) {
     await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/users`, {
         method: "POST",
         headers: {
@@ -172,7 +175,7 @@ export async function createTestUser(token: string, realm: string) {
             requiredActions: [],
             attributes: { locale: "" },
             groups: [],
-        }),
+        })
     });
 
     const userRes = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/users?username=admin`, {
@@ -194,8 +197,11 @@ export async function createTestUser(token: string, realm: string) {
         body: JSON.stringify(["link-tide-account-action"]),
     });
 
+    await GrantUserRole(userId, realm, Roles.Admin, token)
+
     return inviteRes.text();
 }
+
 
 export async function fetchAdapterConfig(token: string, realm: string, clientId: string, outputPath: string) {
     const clientRes = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/clients?clientId=${clientId}`, {
@@ -203,7 +209,6 @@ export async function fetchAdapterConfig(token: string, realm: string, clientId:
     });
 
     const clients = await clientRes.json();
-    console.log(clients)
     const uid = clients[0].id;
 
     const adapterRes = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/vendorResources/get-installations-provider?clientId=${uid}&providerId=keycloak-oidc-keycloak-json`, {
@@ -234,3 +239,87 @@ export async function validateUser(token: string, realm: string) {
 
     return success;
 }
+
+
+const GrantUserRole = async (userId: string, realm: string, roleName: string, token: string): Promise<void> => {
+    const client = roleName === Roles.Admin ? await getClientByClientId(REALM_MGMT, realm, token) : await getClientByClientId(TX_MANAGEMENT_CLIENT, realm, token);
+    console.log(client)
+
+    if (client === null || client?.id === undefined) {
+        throw new Error(`Could not grant user role, client ${TX_MANAGEMENT_CLIENT} does not exist`);
+    }
+
+    const role = roleName === Roles.Admin ? await getTideRealmAdminRole(realm, token) : await getClientRoleByName(realm, roleName, client.id, token);
+    const response = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/users/${userId}/role-mappings/clients/${client.id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify([role])
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error granting user role: ${response.statusText}`);
+        throw new Error(`Error  granting user role: ${errorBody}`);
+    }
+    return;
+}
+
+const getClientByClientId = async (
+    clientId: string,
+    realm: string,
+    token: string
+): Promise<ClientRepresentation | null> => {
+    try {
+        const response = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/clients?clientId=${clientId}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            console.error(`Error fetching client by clientId: ${response.statusText}`);
+            return null;
+        }
+        const clients: ClientRepresentation[] = await response.json();
+        return clients.length > 0 ? clients[0] : null; // should only be one client in the realm with this clientID
+    } catch (error) {
+        console.error("Error fetching client by clientId:", error);
+        return null;
+    }
+};
+
+const getTideRealmAdminRole = async (realm: string, token: string): Promise<RoleRepresentation> => {
+    const client: ClientRepresentation | null = await getClientByClientId(REALM_MGMT, realm, token); // TODO: add to constants 
+    if (client === null) throw new Error("No client found with clientId: " + REALM_MGMT);
+
+    const response = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/clients/${client.id}/roles?search=${Roles.Admin}`, {
+        method: 'GET',
+        headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) {
+        console.error(`Error fetching tide realm admin role: ${response.statusText}`);
+        throw new Error("Error fetching tide realm admin role")
+    }
+
+    const roles = await response.json()
+    return roles[0];
+};
+const getClientRoleByName = async (realm: string, roleName: string, clientuuid: string, token: string): Promise<RoleRepresentation> => {
+    const response = await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/clients/${clientuuid}/roles/${roleName}`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error fetching client role by name: ${response.statusText}`);
+        throw new Error(`Error fetching client role by name: ${errorBody}`);
+    }
+    return response.json();
+};

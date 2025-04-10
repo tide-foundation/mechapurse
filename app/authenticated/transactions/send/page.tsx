@@ -7,7 +7,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import { ImSpinner8 } from "react-icons/im";
-import { Heimdall } from "../../../../tide-modules/modules/heimdall.js";
+import { Heimdall } from "@/tide-modules/modules/heimdall";
 import { useAuth } from "@/components/AuthContext";
 import { CardanoTxBody, DraftSignRequest } from "@/interfaces/interface.js";
 import { processThresholdRules } from "@/lib/IAMService.js";
@@ -205,12 +205,6 @@ function transformCardanoTxBody(json: string): string {
           authData.ruleSettings,
           draftReq.expiry
         );
-
-        // // If CSL returns "AUTHORIZATION REQUIRED", show a green approval waiting message.
-        // if (sig === "AUTHORIZATION REQUIRED") {
-        //   setTransactionResult("Transaction request created, waiting approval");
-        //   return;
-        // }
 
         const sendResponse = await fetch("/api/transaction/send", {
           method: "POST",

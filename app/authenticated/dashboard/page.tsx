@@ -7,7 +7,6 @@ import { FaArrowRight, FaArrowLeft, FaWallet, FaCopy, FaCheckCircle, FaClock } f
 import { Transaction } from "@/types/Transactions";
 import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
-import { signTxDraft } from "@/lib/IAMService";
 import {
   createAuthorization,
   addDraftRequest,
@@ -18,6 +17,7 @@ import {
 import WalletInfo from "@/components/dashboard/WalletInfo";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import PendingApprovals from "@/components/dashboard/PendingApprovals";
+import { signTxDraft } from "@/lib/IAMService";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading, vuid } = useAuth();
@@ -168,6 +168,9 @@ export default function Dashboard() {
       await deleteDraftRequest(draft.id);
     }
   };
+  if (isLoading){
+    return <main></main>
+  }
 
   return (
     <main className="flex flex-col items-center justify-center px-6 py-24 w-full font-['Inter']" >

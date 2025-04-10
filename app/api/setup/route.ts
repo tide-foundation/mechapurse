@@ -6,7 +6,7 @@ import {
     setUpTideRealm,
     updateCustomAdminUIDomain,
     approveAndCommitClients,
-    createTestUser,
+    createAdminUser,
     fetchAdapterConfig,
 } from "@/lib/setup/TidecloakInitRealm";
 import fs from "fs";
@@ -101,26 +101,27 @@ export async function GET(req: NextRequest) {
 
             case "6": {
                 const realm = getRealmName();
-                inviteLink = await createTestUser(token, realm);
+                inviteLink = await createAdminUser(token, realm);
                 log = `👤 User created. Invite link: ${inviteLink}`;
                 saveSetupStep(Number(step));
                 break;
             }
-            case "7": {
-                const realm = getRealmName();
-                await approveAndCommitUsers(token, realm);
-                log = "✅ User context approved and committed.";
-                saveSetupStep(Number(step));
-                break;
-            }
 
-            case "8": {
+            case "7": {
                 const realm = getRealmName();
                 await fetchAdapterConfig(token, realm, "mechapurse", tidecloakPath);
                 log = "📥 Adapter config fetched and saved.";
+                saveSetupStep(Number(step));
+                break;
+            }
+            case "8": {
+                const realm = getRealmName();
+                await approveAndCommitUsers(token, realm);
+                log = "✅ User context approved and committed.";
                 clearSetupStep();
                 break;
             }
+
 
             // case "8": {
             //     clearRealmName();

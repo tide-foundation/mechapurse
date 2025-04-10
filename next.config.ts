@@ -9,6 +9,7 @@ const nextConfig = {
     config.output.webassemblyModuleFilename = "static/wasm/[modulehash].wasm";
     return config;
   },
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;

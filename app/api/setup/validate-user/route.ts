@@ -4,7 +4,7 @@ import { getAdminToken } from "@/lib/setup/TidecloakInitRealm";
 import path from "path";
 import fs from "fs";
 
-const TIDECLOAK_LOCAL_URL = process.env.TIDECLOAK_LOCAL_URL
+const TIDECLOAK_LOCAL_URL = process.env.TIDECLOAK_LOCAL_URL ?? "http://localhost:8080"
 
 export async function GET() {
     try {
@@ -30,8 +30,12 @@ export async function GET() {
         }
 
         const attributes = user.attributes || {};
-        const linked = attributes["tideLinked"] === "true" || attributes["tideLinked"]?.[0] === "true";
-
+        const linked =
+            Array.isArray(attributes["tideUserKey"]) &&
+            attributes["tideUserKey"][0]?.trim() !== "" &&
+            Array.isArray(attributes["vuid"]) &&
+            attributes["vuid"][0]?.trim() !== "";
+      
         return NextResponse.json({
             success: linked,
             message: linked ? "User is linked and setup can continue." : "User has not completed linking.",

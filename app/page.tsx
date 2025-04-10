@@ -1,23 +1,21 @@
 "use client";
 
+import { useAuth } from "@/components/AuthContext";
 import IAMService from "@/lib/IAMService";
 import { useEffect } from "react";
 
 export default function Home() {
-    useEffect(() => {
-        const init = async () => {
-            await IAMService.initIAM((authenticated) => {
-                if (authenticated) {
-                    window.location.href = "/auth/redirect";
-                }
-            });
-        };
-        init();
-    }, []);
+  const { isAuthenticated, isLoading } = useAuth();
 
-    const handleLogin = () => {
-        IAMService.doLogin();
-    };
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+        window.location.href = "/authenticated/dashboard";
+    }
+  }, [isLoading, isAuthenticated]);
+
+  const handleLogin = () => {
+    IAMService.doLogin();
+  };
 
     return (
         <main className="flex flex-col items-center justify-center min-h-screen px-6 py-12 w-full font-['Orbitron'] bg-[var(--color-grey)]">

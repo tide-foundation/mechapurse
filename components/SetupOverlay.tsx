@@ -17,16 +17,17 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
     const runSetup = async () => {
       try {
         // Step 0 – Check if already set up
-        const res = await fetch("/api/setup?step=0");
-        const data = await res.json();
+        const res0 = await fetch("/api/setup?step=0");
+        const data0 = await res0.json();
 
-        if (data.done) {
+        if (data0.done) {
           setDone(true);
           setReady(true);
           return;
         }
 
-        if (data.paused) {
+        if (data0.paused) {
+          // If paused, set to waiting state and exit early.
           setCurrentStep(6);
           setWaitingForUser(true);
           setReady(true);
@@ -35,7 +36,9 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
 
         setReady(true); // we're good to begin rendering the UI
 
+        // Run steps 1 to totalSteps
         for (let step = 1; step <= totalSteps; step++) {
+          // if at step 7 and we're waiting for user, break the loop.
           if (step === 7 && waitingForUser) break;
 
           setCurrentStep(step);
@@ -47,13 +50,14 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
 
           setLog((prev) => [...prev, `✅ ${data.log}`]);
 
+          // At step 6, check for an invite link in the log
           if (step === 6 && data.log.includes("Invite link")) {
             const match = data.log.match(/https?:\/\/\S+/);
             const link = match ? match[0] : null;
             if (link) {
               setInviteLink(link);
               setWaitingForUser(true);
-              return;
+              return; // Exit the loop until the user takes action
             }
           }
         }
@@ -66,8 +70,9 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
       }
     };
 
+    // Run the setup only once when the component mounts.
     runSetup();
-  }, [waitingForUser]);
+  }, []); // Remove waitingForUser from the dependency array
 
   const handleContinue = async () => {
     setWaitingForUser(false);
@@ -78,8 +83,10 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
         const checkUserValid = await fetch(`/api/setup/validate-user`);
         const checkUserValidMsg = await checkUserValid.json();
 
-        if (!checkUserValid.ok) throw new Error(checkUserValidMsg.error || `Step ${step} failed`);
-        if(!checkUserValidMsg.success) { 
+        if (!checkUserValid.ok)
+          throw new Error(checkUserValidMsg.error || `Step ${step} failed`);
+
+        if (!checkUserValidMsg.success) { 
           setWaitingForUser(true);
           setLog((prev) => [...prev, "You have not linked your account, click on the link below to continue."]);
           setCurrentStep(6);
@@ -101,10 +108,10 @@ export default function SetupOverlay({ children }: { children: React.ReactNode }
     }
   };
 
-  // 🔒 Wait until Step 0 check completes
+  // Do not render anything until Step 0 check completes.
   if (!ready) return null;
 
-  // ✅ Setup done — render main app
+  // If setup is complete, render the main app.
   if (done) return <>{children}</>;
 
   const progressPercent = Math.min((currentStep / totalSteps) * 100, 100);

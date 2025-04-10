@@ -17,17 +17,15 @@ import {
 import { useAuth } from "@/components/AuthContext";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, hasRole } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-  const { hasRole } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await IAMService.doLogout();
   };
-
-  if (pathname === "/" || pathname === "/auth/failure") {
+  if (!isAuthenticated) {
     return <main className="w-full">{children}</main>;
   }
 
@@ -39,14 +37,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         backgroundSize: "cover",
       }}
     >
-      {/* Header */}
+{/* Navigation Header renders only for authenticated users */}
       <header className="app-header">
         <div className="header-content">
           <div
             className="logo-title"
             onClick={() => router.push("/authenticated/dashboard")}
           >
-            {/* Uncomment below if you want to show the logo image */}
+            {/* Uncomment if you wish to display the logo image */}
             {/* <Image
               src={LogoImage}
               alt="Mechapurse Logo"
@@ -84,7 +82,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      {/* Page Content */}
+      {/* Main content for authenticated users */}
       <main className="app-dashboard">{children}</main>
     </div>
   );

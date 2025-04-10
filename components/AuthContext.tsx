@@ -9,7 +9,7 @@ import { TX_MANAGEMENT_CLIENT } from "@/app/constants/client";
 interface AuthContextType {
     walletAddressHex: string,
     walletAddress: string,
-    isAuthenticated: boolean;
+    isAuthenticated: boolean | null;
     isLoading: boolean;
     vuid: string;
     hasRole: (role: string, clientId?: string) => boolean;
@@ -32,7 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean| null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [vuid, setVuid] = useState<string>("");
     const [walletAddress, setWalletAddress] = useState<string>("")
