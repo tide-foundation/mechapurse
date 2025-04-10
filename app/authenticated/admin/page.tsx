@@ -758,11 +758,13 @@ const handleModalSave = (updatedRuleSet: RuleSet) => {
                       title={<strong className={styles.validationTitle}>{roleKey}</strong>}
                       expanded={!!expandedKeys[roleKey]}
                       onToggle={() => toggleKeyExpansion(roleKey)}
-                      // headerActions={
-                      //   <button onClick={() => openGlobalRulesForModal(roleKey, null)} className={styles.primaryButton}>
-                      //     <FaPlus /> Add Rule Set
-                      //   </button>
-                      // }
+                      headerActions={
+                        ruleSets.length === 0 && (
+                          <button onClick={() => openGlobalRulesForModal(roleKey, null)} className={styles.primaryButton}>
+                            <FaPlus /> Add Rule Set
+                          </button>
+                        )
+                      }
                     >
                       {ruleSets.length > 0 ? (
                         ruleSets.map((rs, index) => (
