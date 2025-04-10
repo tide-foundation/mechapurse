@@ -8,6 +8,7 @@ import {
 } from '@/interfaces/interface';
 
 const db = new Database('./database.sqlite');
+initializeDatabase();
 
 // Row Types
 
