@@ -1,5 +1,5 @@
 {
-    "realm": "mechapurse-9ddb590d-9d27-4ab5-b23e-11db012c5e4b",
+    "realm": "nextjs-test",
     "accessTokenLifespan": 600,
     "enabled": true,
     "sslRequired": "external",
@@ -16,7 +16,7 @@
                 "description": "Tide E2EE self-decrypt DoB data"
             },
             {
-                "name": "default-roles-mechapurse-9ddb590d-9d27-4ab5-b23e-11db012c5e4b",
+                "name": "default-roles-nextjs-test",
                 "description": "${role_default-roles}",
                 "composite": true,
                 "composites": {
@@ -33,7 +33,7 @@
         }
     },
     "defaultRole": {
-        "name": "default-roles-mechapurse-9ddb590d-9d27-4ab5-b23e-11db012c5e4b",
+        "name": "default-roles-nextjs-test",
         "description": "${role_default-roles}",
         "composite": true,
         "clientRole": false
