@@ -3,7 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
-import { FaArrowRight, FaArrowLeft, FaWallet, FaCopy, FaCheckCircle, FaClock } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaArrowLeft,
+  FaWallet,
+  FaCopy,
+  FaCheckCircle,
+  FaClock
+} from "react-icons/fa";
 import { Transaction } from "@/types/Transactions";
 import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
@@ -18,14 +25,26 @@ import WalletInfo from "@/components/dashboard/WalletInfo";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import PendingApprovals from "@/components/dashboard/PendingApprovals";
 import { signTxDraft } from "@/lib/IAMService";
+import { transformCardanoTxBody } from "@/app/utils/helperMethods";
+
+// Import react-toastify for notifications
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoading, vuid } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    vuid,
+    canProcessRequest,
+    processThresholdRules,
+    walletAddress,
+    walletAddressHex
+  } = useAuth();
   const router = useRouter();
-  const [walletAddress, setWalletAddress] = useState("");
   const [walletBalance, setWalletBalance] = useState("No balance data found");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isWalletLoading, setIsWalletLoading] = useState(true);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(true);
   const [pendingTransactions, setPendingTransactions] = useState<DraftSignRequest[]>([]);
@@ -34,6 +53,7 @@ export default function Dashboard() {
   const [leftColumnHeight, setLeftColumnHeight] = useState(0);
 
   const approvalScrollRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(walletAddress);
@@ -53,13 +73,7 @@ export default function Dashboard() {
     }
   };
 
-  const getWalletAddress = async () => {
-    return await fetch("/api/dashboard?type=wallet", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-  };
-
+  // API calls
   const getWalletBalance = async (walletAddress: string) => {
     return await fetch(`/api/dashboard?type=balance&wallet=${walletAddress}`, {
       method: "GET",
@@ -83,16 +97,9 @@ export default function Dashboard() {
 
   const fetchWalletData = async () => {
     try {
-      const walletRes = await getWalletAddress();
-      const walletData = await walletRes.json();
-      if (!walletRes.ok) throw new Error(walletData.error);
-      const walletAddr = walletData.address;
-      setWalletAddress(walletAddr);
-      setIsWalletLoading(false);
-
       const [balanceRes, transactionsRes, pendingTransactionsRes] = await Promise.all([
-        getWalletBalance(walletAddr),
-        getWalletTransactions(walletAddr),
+        getWalletBalance(walletAddress),
+        getWalletTransactions(walletAddress),
         getPendingTransactions(),
       ]);
 
@@ -109,17 +116,25 @@ export default function Dashboard() {
       setPendingTransactions(pendingTransactionsData.drafts);
     } catch (error) {
       console.error("Failed to fetch wallet data:", error);
+      toast.error("Error loading wallet data");
     } finally {
       setIsBalanceLoading(false);
       setIsTransactionsLoading(false);
     }
   };
 
+  // Initial fetch and polling
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
       fetchWalletData();
+      // Poll every 30 seconds to refresh all on-screen data
+      const pollingInterval = setInterval(() => {
+        fetchWalletData();
+      }, 30000);
+
+      return () => clearInterval(pollingInterval);
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, walletAddress]);
 
   useEffect(() => {
     if (leftColumnRef.current) {
@@ -127,53 +142,85 @@ export default function Dashboard() {
     }
   }, [walletAddress, walletBalance, transactions]);
 
-  const [copied, setCopied] = useState(false);
-
   const prettyJson = (jsonString: string) => {
     const txBody: CardanoTxBody = JSON.parse(jsonString);
     return JSON.stringify(txBody, (k, v) => v ?? undefined, 2);
   };
 
+  // Updated review handler with notifications, UI refresh, and polling support
   const handleReview = async (draft: DraftSignRequest) => {
-    const resp = await fetch("/api/utils", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!resp.ok) throw new Error("Failed to fetch uri");
-    const data = await resp.json();
-    const expiry = draft.expiry;
-    const heimdall = new Heimdall(data.uri, [vuid]);
-    await heimdall.openEnclave();
-    const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
-
-    if (authApproval.accepted === true) {
-      const authzAuthn = await heimdall.getAuthorizerAuthentication();
-      heimdall.closeEnclave();
-
-      const data = await createAuthorization(authApproval.data, authzAuthn);
-      await addAdminAuth(draft.id, vuid, data.authorization);
-
-      const auths: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
-      const authzList = auths.map((a) => a.authorization);
-      const sig = await signTxDraft(draft.txBody, authzList, data.ruleSettings, expiry);
-
-      const response = await fetch("/api/transaction/send", {
-        method: "POST",
+    try {
+      // Fetch the URI required for processing
+      const resp = await fetch("/api/utils", {
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txBody: draft.txBody, sigBase64: sig }),
       });
+      if (!resp.ok) throw new Error("Failed to fetch uri");
+      const data = await resp.json();
 
-      const sentResp = await response.json();
-      if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
-      await deleteDraftRequest(draft.id);
+      const expiry = draft.expiry;
+      const heimdall = new Heimdall(data.uri, [vuid]);
+      await heimdall.openEnclave();
+      const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
+
+      if (authApproval.accepted === true) {
+        const authzAuthn = await heimdall.getAuthorizerAuthentication();
+        heimdall.closeEnclave();
+
+        const authData = await createAuthorization(authApproval.data, authzAuthn);
+        await addAdminAuth(draft.id, vuid, authData.authorization);
+
+        const auths: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
+        const authzList = auths.map((a) => a.authorization);
+
+        const isProcessAllowed = await canProcessRequest(
+          authData.ruleSettings.rules,
+          transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
+        );
+        const requestSettings = await processThresholdRules(
+          authData.ruleSettings.rules,
+          transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
+        );
+
+        // If the transaction is not yet ready to be processed, notify the user
+        if (!isProcessAllowed || (requestSettings !== null && requestSettings.threshold !== authzList.length)) {
+          const remaining = requestSettings ? requestSettings.threshold - authzList.length : 0;
+          toast.info(`Transaction request created, requires ${remaining} more signature(s)!`);
+          return;
+        }
+
+        // Finalize and sign the transaction
+        const sig = await signTxDraft(draft.txBody, authzList, authData.ruleSettings, expiry);
+        const response = await fetch("/api/transaction/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ txBody: draft.txBody, sigBase64: sig }),
+        });
+
+        const sentResp = await response.json();
+        if (!response.ok) throw new Error(sentResp.error || "Transaction failed");
+
+        // Remove the draft after a successful transaction
+        await deleteDraftRequest(draft.id);
+
+        // Notify success to the user
+        toast.success("Transaction sent successfully!");
+
+        // Refresh all the data on the screen
+        await fetchWalletData();
+      }
+    } catch (error) {
+      console.error("Error processing transaction review:", error);
+      toast.error("Transaction processing failed");
     }
   };
-  if (isLoading){
-    return <main></main>
+
+  if (isLoading) {
+    return <main></main>;
   }
 
   return (
-    <main className="flex flex-col items-center justify-center px-6 py-24 w-full font-['Inter']" >
+    <main className="flex flex-col items-center justify-center px-6 py-24 w-full font-['Inter']">
       <div className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-2 !pt-8">
         <div ref={leftColumnRef} className="md:col-span-2 space-y-6">
           <WalletInfo
@@ -199,6 +246,18 @@ export default function Dashboard() {
         onScrollLeft={scrollLeft}
         onScrollRight={scrollRight}
       />
-    </main >
+
+      {/* ToastContainer renders the toast notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+    </main>
   );
 }
