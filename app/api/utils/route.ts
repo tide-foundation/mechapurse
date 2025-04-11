@@ -6,7 +6,7 @@ import { createApprovalURI, createAuthorization, getTideRealmAdminInitCert } fro
 import { cookies } from "next/headers";
 import { GetRuleConfiguration } from "@/lib/db";
 import { RuleConfiguration } from "@/interfaces/interface";
-import { SECURITY_ADMIN_CONSOLE } from "@/app/constants/client";
+import { REALM_MGMT } from "@/app/constants/client";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
                 }
                 return NextResponse.json({ authorization: txAuth, ruleSettings: { ...rules.ruleConfig } });
             case "rules":
-                const rulesAuth = await createAuthorization(SECURITY_ADMIN_CONSOLE, authorizerApproval, authorizerAuthentication, token);
+                const rulesAuth = await createAuthorization(REALM_MGMT, authorizerApproval, authorizerAuthentication, token);
                 const initCert = await getTideRealmAdminInitCert(token);
                 return NextResponse.json({ authorization: rulesAuth, initCert: initCert });
         }
