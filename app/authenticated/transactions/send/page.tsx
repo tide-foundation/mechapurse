@@ -11,6 +11,7 @@ import { Heimdall } from "@/tide-modules/modules/heimdall";
 import { useAuth } from "@/components/AuthContext";
 import { CardanoTxBody, DraftSignRequest } from "@/interfaces/interface.js";
 import { processThresholdRules } from "@/lib/IAMService.js";
+import { transformCardanoTxBody } from "@/app/utils/helperMethods";
 
 export default function Send() {
   const { vuid, createTxDraft, signTxDraft, canProcessRequest, processThresholdRules, walletAddressHex, walletAddress } = useAuth();
@@ -83,60 +84,6 @@ export default function Send() {
     return resp;
   };
 
-  /**
- * Recursively transforms all object keys so that each key starts with a capital letter.
- * If the input is an array, it transforms each element.
- *
- * @param obj - The object or array to transform.
- * @returns A new object or array with all keys starting with a capital letter.
- */
-function capitalizeKeys(obj: any): any {
-  if (Array.isArray(obj)) {
-    return obj.map(item => capitalizeKeys(item));
-  } else if (obj !== null && typeof obj === "object") {
-    return Object.keys(obj).reduce((acc, key) => {
-      // Capitalize the first letter of the key and leave the rest of the key as is.
-      const capitalKey = key.charAt(0).toUpperCase() + key.slice(1);
-      acc[capitalKey] = capitalizeKeys(obj[key]);
-      return acc;
-    }, {} as any);
-  }
-  return obj;
-}
-/**
- * Transforms the Cardano transaction body JSON string:
- * 1. Parses the JSON.
- * 2. Processes the Outputs array, replacing Amount objects (with a coin property) with that coin value.
- * 3. Ensures all keys in the object start with a capital letter.
- * 4. Returns the updated object as a JSON string.
- *
- * @param json - The JSON string representing the transaction body.
- * @returns The transformed JSON string with capitalized keys.
- */
-function transformCardanoTxBody(json: string): string {
-  // Parse the JSON string into an object.
-  const txBody = JSON.parse(json);
-  
-  // Process each output:
-  // If "Amount" is an object with a "coin" property, replace it with the coin value.
-  if (Array.isArray(txBody.outputs)) {
-    txBody.Outputs = txBody.outputs.map((output: any) => {
-      if (output.amount && typeof output.amount === "object" && "coin" in output.amount) {
-        output.amount = output.amount.coin;
-      }
-      if(output.address === walletAddress){
-        output.address = walletAddressHex
-      }
-      return output;
-    });
-  }
-  
-  // Now, recursively ensure every key in the object starts with a capital letter.
-  const transformed = capitalizeKeys(txBody);
-  
-  // Return the final JSON string.
-  return JSON.stringify(transformed);
-}
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,9 +139,9 @@ function transformCardanoTxBody(json: string): string {
         await addAdminAuth(draftReq.id, vuid, authData.authorization, true);
 
 
-        const isProcessAllowed = await canProcessRequest(authData.ruleSettings.rules, transformCardanoTxBody(data.draftJson))
-        const requestSettings = await processThresholdRules(authData.ruleSettings.rules, transformCardanoTxBody(data.draftJson))
-        if(!isProcessAllowed || (requestSettings !== null && requestSettings.threshold > 1)){
+        const isProcessAllowed = await canProcessRequest(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson))
+        const requestSettings = await processThresholdRules(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+        if (!isProcessAllowed || (requestSettings !== null && requestSettings.threshold > 1)) {
 
           setTransactionResult(`Transaction request created, requires ${requestSettings!.threshold} signatures`);
           return;
@@ -230,7 +177,7 @@ function transformCardanoTxBody(json: string): string {
       } else {
         errorMessage = String(err);
       }
-    
+
       setError(errorMessage);
     } finally {
       setLoading(false);
