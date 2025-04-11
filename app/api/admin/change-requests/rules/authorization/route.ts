@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
         const ruleAuth: RuleSettingAuthorization[] | null = await GetRuleSettingsAuthorizationByDraftId(id)
 
-        return NextResponse.json({authorization: ruleAuth});
+        return NextResponse.json({ authorization: ruleAuth });
     } catch (error) {
         console.error("Error fetching roles:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -73,36 +73,36 @@ export async function POST(req: NextRequest) {
         await AddRuleSettingsAuthorization(ruleReqDraftId, vuid, authorization, rejected);
 
         const authorizations: RuleSettingAuthorization[] | null = await GetRuleSettingsAuthorizationByDraftId(ruleReqDraftId);
-        
+
         const estimateTotalAdmins = (threshold: number, thresholdPercentage: number): number => {
             return Math.ceil(threshold / thresholdPercentage);
-          };
-          
-          if (authorizations) {
+        };
+
+        if (authorizations) {
             const totalApprovals = authorizations.filter(auth => !auth.rejected).length;
             const totalRejected = authorizations.filter(auth => auth.rejected).length;
             const threshold = Number(await getAdminThreshold(token));
 
             if (!isNaN(threshold)) {
-              const estimatedTotalAdmins = estimateTotalAdmins(threshold, 0.7);
-              const votesReceived = totalApprovals + totalRejected;
-              const potentialRemainingApprovals = estimatedTotalAdmins - votesReceived;
-              const bestCaseApprovals = totalApprovals + potentialRemainingApprovals;
-          
-              // Auto-reject if even if all remaining admins approve you still won't hit the threshold.
-              if (bestCaseApprovals < threshold) {
+                const estimatedTotalAdmins = estimateTotalAdmins(threshold, 0.7);
+                const votesReceived = totalApprovals + totalRejected;
+                const potentialRemainingApprovals = estimatedTotalAdmins - votesReceived;
+                const bestCaseApprovals = totalApprovals + potentialRemainingApprovals;
 
-                await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "DENIED");
-              }
-              // Approve if enough approvals have been collected.
-              else if (totalApprovals >= threshold) {
-                await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "APPROVED");
-              }
-              else {
-                await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "PENDING");
-              }
+                // Auto-reject if even if all remaining admins approve you still won't hit the threshold.
+                if (bestCaseApprovals < threshold) {
+
+                    await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "DENIED");
+                }
+                // Approve if enough approvals have been collected.
+                else if (totalApprovals >= threshold) {
+                    await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "APPROVED");
+                }
+                else {
+                    await UpdateRuleSettingDraftStatusById(ruleReqDraftId, "PENDING");
+                }
             }
-          }
+        }
 
         return NextResponse.json({ message: "Succesfully added auth" });
     } catch (error) {

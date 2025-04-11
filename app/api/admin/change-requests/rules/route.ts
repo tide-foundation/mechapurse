@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
             };
         }));
         return NextResponse.json(humanReadableObj);
-        
+
     } catch (error) {
         console.error("Error fetching rules:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
         const approvalUri = await createApprovalURI(token);
 
         const ruleSettings: RuleSettingDraft | null = await GetRuleSettingsDraftById(id);
-        if(ruleSettings === null) {
+        if (ruleSettings === null) {
             return NextResponse.json({ error: "No settings draft found with this id" }, { status: 400 });
         }
 
-        return NextResponse.json({draft: ruleSettings.ruleReqDraft, expiry: ruleSettings.expiry, customDomainUri: approvalUri.customDomainUri});
+        return NextResponse.json({ draft: ruleSettings.ruleReqDraft, expiry: ruleSettings.expiry, customDomainUri: approvalUri.customDomainUri });
 
     } catch (err) {
         console.error("Internal Server Error:", err);

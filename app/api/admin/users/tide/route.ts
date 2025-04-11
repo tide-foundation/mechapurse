@@ -28,18 +28,18 @@ export async function GET(req: NextRequest) {
     const redirectUri = searchParams.get("redirect_uri");
 
 
-    if(userId === null){
+    if (userId === null) {
         return NextResponse.json({ error: "No User ID Found" }, { status: 400 });
 
     }
-    if(redirectUri === null){
+    if (redirectUri === null) {
         return NextResponse.json({ error: "RedirectUri Found" }, { status: 400 });
 
     }
 
-    const link = await GetTideLinkUrl(userId, token, redirectUri )
-    
-    return NextResponse.json({link: link});
+    const link = await GetTideLinkUrl(userId, token, redirectUri)
+
+    return NextResponse.json({ link: link });
 }
 
 

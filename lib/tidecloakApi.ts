@@ -31,7 +31,6 @@ export const getUserByVuid = async (vuid: string, token: string): Promise<UserRe
         // Optionally handle non-OK responses.
         throw new Error(`Error fetching user: ${response.statusText}`);
     }
-    
     return response.json();
 }
 

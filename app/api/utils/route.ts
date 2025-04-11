@@ -6,6 +6,7 @@ import { createApprovalURI, createAuthorization, getTideRealmAdminInitCert } fro
 import { cookies } from "next/headers";
 import { GetRuleConfiguration } from "@/lib/db";
 import { RuleConfiguration } from "@/interfaces/interface";
+import { SECURITY_ADMIN_CONSOLE } from "@/app/constants/client";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 
@@ -55,25 +56,22 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        const auth = await createAuthorization(getResource(), authorizerApproval, authorizerAuthentication, token);
         const { searchParams } = new URL(req.url);
         const type = searchParams.get("type");
 
-        switch(type){
+        switch (type) {
             case "cardanoTx":
+                const txAuth = await createAuthorization(getResource(), authorizerApproval, authorizerAuthentication, token);
                 const rules: RuleConfiguration | null = await GetRuleConfiguration();
                 if (rules == null) {
                     return NextResponse.json({ error: "No rules found" }, { status: 404 });
                 }
-                return NextResponse.json({ authorization: auth, ruleSettings: { ...rules.ruleConfig } });
+                return NextResponse.json({ authorization: txAuth, ruleSettings: { ...rules.ruleConfig } });
             case "rules":
+                const rulesAuth = await createAuthorization(SECURITY_ADMIN_CONSOLE, authorizerApproval, authorizerAuthentication, token);
                 const initCert = await getTideRealmAdminInitCert(token);
-
-                return NextResponse.json({ authorization: auth, initCert: initCert });
+                return NextResponse.json({ authorization: rulesAuth, initCert: initCert });
         }
-        
-        
-        
 
     } catch (err) {
         console.error("Internal Server Error:", err);

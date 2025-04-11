@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         if (!user) throw new Error("Invalid token");
 
         await DeleteDraftSignRequest(id);
-  
+
         return NextResponse.json({ message: "Successfully deleted!" });
     } catch (err) {
         console.error("Internal Server Error:", err);

@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRole);
         if (!user) throw new Error("Invalid token");
 
-        
+
         await DeleteRuleSettingsDraft(id)
 
-        return NextResponse.json({message: "Successfully deleted"});
+        return NextResponse.json({ message: "Successfully deleted" });
 
     } catch (err) {
         console.error("Internal Server Error:", err);

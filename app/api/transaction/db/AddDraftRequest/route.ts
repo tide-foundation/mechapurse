@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         if (!user) throw new Error("Invalid token");
 
         const draftReq = await AddDraftSignRequest(vuid, txBody, data, dataJson);
-  
+
         return NextResponse.json({ draftReq: draftReq });
     } catch (err) {
         console.error("Internal Server Error:", err);

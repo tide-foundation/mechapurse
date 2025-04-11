@@ -17,14 +17,14 @@ interface AuthContextType {
     signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
     createRuleSettingsDraft: (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => string;
     signRuleSettingsDraft: (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => Promise<string>;
-    canProcessRequest : (
+    canProcessRequest: (
         ruleSettings: RuleSettings,
         draftJson: string
-      ) => Promise<boolean>;
-      processThresholdRules : (
+    ) => Promise<boolean>;
+    processThresholdRules: (
         ruleSettings: RuleSettings,
         draftJson: string
-      ) => Promise<{ roles: string[]; threshold: number } | null>;
+    ) => Promise<{ roles: string[]; threshold: number } | null>;
 
 
 }
@@ -32,7 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean| null>(null);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [vuid, setVuid] = useState<string>("");
     const [walletAddress, setWalletAddress] = useState<string>("")
@@ -93,20 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const canProcessRequest = async (
         ruleSettings: any,
         draftJson: string
-      ): Promise<boolean> => {
+    ): Promise<boolean> => {
         const result: { roles: string[]; threshold: number } | null =
-          await IAMService.processThresholdRules("CardanoTx:1.BlindSig:1", "threshold_rule", ruleSettings, draftJson);
-        
+            await IAMService.processThresholdRules("CardanoTx:1.BlindSig:1", "threshold_rule", ruleSettings, draftJson);
+
         if (result == null) {
-          return false;
+            return false;
         }
-                return result.roles.some(r => hasRole(r, TX_MANAGEMENT_CLIENT));
-      };
+        return result.roles.some(r => hasRole(r, TX_MANAGEMENT_CLIENT));
+    };
 
     const processThresholdRules = async (
         ruleSettings: any, // Replace `any` with your actual type if available, e.g., RuleSettings
         draftJson: string
-      ): Promise<{ roles: string[]; threshold: number } | null> => {
+    ): Promise<{ roles: string[]; threshold: number } | null> => {
         // Call the tidecloak.checkThresholdRule function with the provided parameters.
         return await IAMService.processThresholdRules("CardanoTx:1.BlindSig:1", "threshold_rule", ruleSettings, draftJson);
     };
