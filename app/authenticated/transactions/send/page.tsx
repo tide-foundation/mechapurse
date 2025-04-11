@@ -140,7 +140,7 @@ export default function Send() {
 
 
         const isProcessAllowed = await canProcessRequest(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson))
-        const requestSettings = await processThresholdRules(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+        const requestSettings = await processThresholdRules(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson))
         if (!isProcessAllowed || (requestSettings !== null && requestSettings.threshold > 1)) {
 
           setTransactionResult(`Transaction request created, requires ${requestSettings!.threshold} signatures`);
