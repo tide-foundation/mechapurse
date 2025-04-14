@@ -751,10 +751,6 @@ export default function AdminDashboard() {
                       />
                     ))}
                 </div>
-                <p style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: "0.95rem", marginTop: "1rem" }}>
-                  Note: Global threshold rules are not editable in simple mode.
-                  To enforce threshold approvals, please switch to advanced mode.
-                </p>
               </CollapsibleSection>
             )}
             <section className={styles.section}>
