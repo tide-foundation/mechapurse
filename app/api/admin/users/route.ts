@@ -114,10 +114,14 @@ export async function DELETE(req: NextRequest) {
         if (!user) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 });
         }
-        const { id } = await req.json();
-        // users = users.filter((user: { id: string; }) => user.id !== id);
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
 
-        await DeleteUser(id, token)
+        if(userId === null) {
+            return NextResponse.json({ error: "UserId was not provided" }, { status: 400 });
+        }
+
+        await DeleteUser(userId, token)
 
         return NextResponse.json({ success: true });
     } catch (error) {

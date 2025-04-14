@@ -432,6 +432,19 @@ export default function AdminDashboard() {
     setUserUpdateModalOpen(true);
   };
 
+  const deleteUser = async (userId: string) => {
+    try {
+        const res = await fetch(`/api/admin/users?userId=${userId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) throw new Error("Failed to update user");
+        await fetchUserChangeRequests();
+    } catch (error) {
+      console.error("Error updating user:", error);
+    }
+  };
+
   const updateUser = async (user: User, updatedUser: Partial<UserUpdate>) => {
     try {
       if (user.firstName !== updatedUser.firstName || user.email !== updatedUser.email || user.lastName !== updatedUser.lastName) {
@@ -963,6 +976,11 @@ export default function AdminDashboard() {
             onClose={() => setUserUpdateModalOpen(false)}
             onUpdate={async (updatedUser: Partial<UserUpdate>) => {
               await updateUser(userToEdit, updatedUser);
+              setUserUpdateModalOpen(false);
+              fetchUsers();
+            }}
+            onDelete={async (userId: string) => {
+              await deleteUser(userId);
               setUserUpdateModalOpen(false);
               fetchUsers();
             }}

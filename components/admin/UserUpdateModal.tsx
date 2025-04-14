@@ -5,7 +5,6 @@ import styles from "@/styles/AdminDashboard.module.css";
 import { User, UserUpdate } from "@/interfaces/interface";
 import { useAuth } from "../AuthContext";
 
-
 interface Role {
   id: string;
   name: string;
@@ -17,6 +16,7 @@ interface UserUpdateModalProps {
   roles: Role[]; // List of all available roles.
   onClose: () => void;
   onUpdate: (updatedUser: Partial<UserUpdate>) => void | Promise<void>;
+  onDelete: (userId: string) => void | Promise<void>; // New prop for deletion
 }
 
 const UserUpdateModal = ({
@@ -24,8 +24,9 @@ const UserUpdateModal = ({
   roles,
   onClose,
   onUpdate,
+  onDelete,
 }: UserUpdateModalProps) => {
-  const {vuid} = useAuth();
+  const { vuid } = useAuth();
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
   const [email, setEmail] = useState(user.email);
@@ -33,8 +34,8 @@ const UserUpdateModal = ({
   const initialAssignedRoles: string[] = Array.isArray(user.role)
     ? user.role
     : user.role
-      ? [user.role]
-      : [];
+    ? [user.role]
+    : [];
   const [assignedRoles, setAssignedRoles] = useState<string[]>(initialAssignedRoles);
   const [copyStatus, setCopyStatus] = useState<string>("");
 
@@ -57,24 +58,31 @@ const UserUpdateModal = ({
     e.preventDefault();
 
     // Determine which roles to add and which to remove.
-    const rolesToAdd = assignedRoles.filter(role => !initialAssignedRoles.includes(role));
-    const rolesToRemove = initialAssignedRoles.filter(role => !assignedRoles.includes(role));
+    const rolesToAdd = assignedRoles.filter((role) => !initialAssignedRoles.includes(role));
+    const rolesToRemove = initialAssignedRoles.filter((role) => !assignedRoles.includes(role));
 
-    // Pass back updated details along with roles to add and remove, including the original id.
-    onUpdate({ id: user.id, name, email, role: assignedRoles, rolesToAdd, rolesToRemove });
+    // Pass back updated details along with roles to add and remove.
+    onUpdate({
+      id: user.id,
+      firstName,
+      lastName,
+      email,
+      role: assignedRoles,
+      rolesToAdd,
+      rolesToRemove,
+    });
   };
 
   const getTideLinkUrl = async () => {
     const currentUrl = window.location.origin;
     const encodedUrl = encodeURIComponent(currentUrl);
-    const resp = await fetch(`/api/admin/users/tide?userId=${user.id}&redirect_uri=${encodedUrl}`,{
+    const resp = await fetch(`/api/admin/users/tide?userId=${user.id}&redirect_uri=${encodedUrl}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
-    const data = await resp.json()
+    const data = await resp.json();
     return data.link;
-
-  }
+  };
 
   // Copy link function without URL preview.
   const handleCopyLink = async () => {
@@ -88,6 +96,17 @@ const UserUpdateModal = ({
     }
   };
 
+  // Handler for deleting a user.
+  const handleDeleteUser = () => {
+    // Confirm deletion with the user.
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this user? This action cannot be undone."
+    );
+    if (confirmed && onDelete) {
+      onDelete(user.id);
+    }
+  };
+
   return (
     <div
       className={styles.modalOverlay}
@@ -96,16 +115,36 @@ const UserUpdateModal = ({
       aria-labelledby="userUpdateModalTitle"
     >
       <div className={`${styles.appCard} ${styles.userModalCard}`}>
-        <h3 id="userUpdateModalTitle" className={styles.modalTitle}>
-          Edit User
-        </h3>
+        {/* Modal Header with Title and Delete Button */}
+        <div
+          className={styles.modalHeader}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h3 id="userUpdateModalTitle" className={styles.modalTitle}>
+            Edit User
+          </h3>
+          <button
+            type="button"
+            onClick={handleDeleteUser}
+            className={styles.deleteButton}
+            title="Delete User"
+          >
+            Delete User
+          </button>
+        </div>
+
         <p className={styles.modalSubtitle}>
-          Update user details, manage roles, and invite the user to link their Tide account.
+          Update user details, manage roles, invite the user to link their Tide account, or delete the user.
         </p>
+
         <form onSubmit={handleSubmit}>
           {/* User Details */}
           <div className={styles.inputGroup}>
-            <label className={styles.label}>FirstName</label>
+            <label className={styles.label}>First Name</label>
             <input
               type="text"
               className={styles.inputField}
@@ -115,7 +154,7 @@ const UserUpdateModal = ({
             />
           </div>
           <div className={styles.inputGroup}>
-            <label className={styles.label}>LastName</label>
+            <label className={styles.label}>Last Name</label>
             <input
               type="text"
               className={styles.inputField}
@@ -208,6 +247,7 @@ const UserUpdateModal = ({
             </div>
           </div>
 
+          {/* Modal Actions */}
           <div className={styles.modalActions}>
             <button type="button" onClick={onClose} className={styles.secondaryButton}>
               Cancel

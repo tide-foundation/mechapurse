@@ -79,7 +79,7 @@ export default function PendingApprovals({
         <h2 className={styles.pageHeader}>Pending Transactions</h2>
         {transactions.length <= 0 ? (
           <div className={styles.emptyContainer}>
-            <p className="text-gray-600">No transactions require approval.</p>
+            <p className="text-gray-600 text-center">No transactions require approval.</p>
           </div>
         ) : (
           <div className={styles.navAndTransContainer}>
