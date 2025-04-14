@@ -14,7 +14,16 @@ import { processThresholdRules } from "@/lib/IAMService.js";
 import { transformCardanoTxBody } from "@/app/utils/helperMethods";
 
 export default function Send() {
-  const { vuid, createTxDraft, signTxDraft, canProcessRequest, processThresholdRules, walletAddressHex, walletAddress } = useAuth();
+  const {
+    vuid,
+    createTxDraft,
+    signTxDraft,
+    canProcessRequest,
+    processThresholdRules,
+    walletAddressHex,
+    walletAddress,
+  } = useAuth();
+
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [transactionResult, setTransactionResult] = useState<string | null>(null);
@@ -35,7 +44,10 @@ export default function Send() {
     if (!response.ok)
       throw new Error(data.error || "Unable to create authorization");
 
-    return { authorization: data.authorization, ruleSettings: data.ruleSettings };
+    return {
+      authorization: data.authorization,
+      ruleSettings: data.ruleSettings,
+    };
   };
 
   const addDraftRequest = async (
@@ -84,7 +96,6 @@ export default function Send() {
     return resp;
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -97,7 +108,6 @@ export default function Send() {
       return;
     }
 
-    // Ensure that the amount is a valid positive number.
     if (!amount.trim() || isNaN(Number(amount)) || Number(amount) <= 0) {
       setError("Amount must be a valid number greater than 0.");
       setLoading(false);
@@ -138,12 +148,22 @@ export default function Send() {
         );
         await addAdminAuth(draftReq.id, vuid, authData.authorization, true);
 
-
-        const isProcessAllowed = await canProcessRequest(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson))
-        const requestSettings = await processThresholdRules(authData.ruleSettings.rules, transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson))
-        if (!isProcessAllowed || (requestSettings !== null && requestSettings.threshold > 1)) {
-
-          setTransactionResult(`Transaction request created, requires ${requestSettings!.threshold} signatures`);
+        const isProcessAllowed = await canProcessRequest(
+          authData.ruleSettings.rules,
+          transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+        );
+        const requestSettings = await processThresholdRules(
+          authData.ruleSettings.rules,
+          transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+        );
+        console.log(isProcessAllowed);
+        if (
+          !isProcessAllowed ||
+          (requestSettings !== null && requestSettings.threshold > 1)
+        ) {
+          setTransactionResult(
+            `Transaction request created and is pending ${requestSettings!.threshold} signature(s).`
+          );
           return;
         }
         const sig = await signTxDraft(
@@ -165,19 +185,21 @@ export default function Send() {
           throw new Error(sentResp.error || "Transaction failed");
         }
 
-        setTransactionResult(`Transaction successfully submitted! TX Hash: ${sentResp.txHash}`);
+        // Display a succinct receipt message with the TX hash.
+        setTransactionResult(
+          `Transaction successfully submitted! Receipt (TX Hash): ${sentResp.txHash}`
+        );
         await deleteDraftRequest(draftReq.id);
       }
     } catch (err: any) {
       let errorMessage: string;
-      if (typeof err === 'string') {
+      if (typeof err === "string") {
         errorMessage = err;
-      } else if (err instanceof Error && typeof err.message === 'string') {
+      } else if (err instanceof Error && typeof err.message === "string") {
         errorMessage = err.message;
       } else {
         errorMessage = String(err);
       }
-
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -206,7 +228,14 @@ export default function Send() {
           </div>
 
           <div className="input-group">
-            <label className="label">Amount (ADA)</label>
+            <div className="flex justify-between items-center">
+              <label className="label">Amount (ADA)</label>
+              {amount && !isNaN(Number(amount)) && (
+                <span className="text-sm text-gray-500">
+                  {(Number(amount) * 1_000_000).toLocaleString()} lovelace
+                </span>
+              )}
+            </div>
             <input
               type="number"
               className="input-field"
@@ -238,32 +267,39 @@ export default function Send() {
         {error && (
           <div
             className="error-message"
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "1rem" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              marginTop: "1rem",
+            }}
           >
             <FaExclamationTriangle />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Transaction/Success Message */}
+        {/* Transaction Success / Receipt Message */}
         {transactionResult && (
           <div
             className="transaction-result"
-            style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}
+            style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              backgroundColor: "#e6ffed",
+              border: "1px solid #b7eb8f",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              color: "#237804",
+              fontWeight: "bold",
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+            }}
           >
-            <div
-              className="success-message"
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "white" }}
-            >
-              <FaCheckCircle />
-              <span>{transactionResult}</span>
-            </div>
-            {transactionResult.includes("TX Hash:") && (
-              <>
-                <h3 className="transaction-preview-title">Transaction Preview:</h3>
-                <pre className="transaction-preview">{transactionResult}</pre>
-              </>
-            )}
+            <FaCheckCircle />
+            <span>{transactionResult}</span>
           </div>
         )}
       </div>

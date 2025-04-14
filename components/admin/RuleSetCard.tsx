@@ -47,17 +47,18 @@ export const RuleSetCard = ({ ruleSet, index, onEdit, onDelete }: RuleSetCardPro
                 </div>
                 {rule.conditions && rule.conditions.length > 0 ? (
                   <div className={styles.conditionsWrapper}>
-                    {rule.conditions.map((cond, cIdx) => (
-                      <div key={cIdx} className={styles.conditionItem}>
-                        <div>
-                          <strong>Method:</strong> {cond.method}
-                        </div>
-                        <div>
-                          <strong>Values:</strong> {(cond.values || []).join(", ")}
-                        </div>
-                      </div>
-                    ))}
+                {rule.conditions.map((cond, cIdx) => (
+                  <div key={cIdx} className={styles.conditionItem}>
+                    <div>
+                      <strong>Method:</strong> {cond.method}
+                    </div>
+                    <div>
+                      <strong>Values:</strong> {(cond.values || []).join(", ")}
+                      {rule.field === "Outputs.Amount" && (<span className={styles.unitBadge}>lovelace</span>)}
+                    </div>
                   </div>
+                ))}
+              </div>
                 ) : (
                   <div className={styles.noConditions}>No conditions provided.</div>
                 )}

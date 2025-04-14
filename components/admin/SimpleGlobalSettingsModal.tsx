@@ -23,7 +23,7 @@ export default function SimpleGlobalSettingsModal({
 }: SimpleGlobalSettingsModalProps) {
   const { walletAddressHex } = useAuth();
 
-  // The user enters values in ADA.
+  // User enters values in ADA.
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   // For threshold, we expect a number (approvals).
@@ -31,29 +31,40 @@ export default function SimpleGlobalSettingsModal({
   // Maximum fee is entered directly in lovelace.
   const [maxFee, setMaxFee] = useState("");
 
-  // When editing, pre-populate the fields with the inverse of the adjustments.
+  // Pre-populate fields when editing.
   useEffect(() => {
     if (settings && settings.rules) {
       // Find the rule for Outputs.Amount.
       const amountRule = settings.rules.find(rule => rule.field === "Outputs.Amount");
       if (amountRule && amountRule.conditions?.length) {
-        const minCondition = amountRule.conditions.find(cond => cond.method === "TOTAL_MORE_THAN");
-        const maxCondition = amountRule.conditions.find(cond => cond.method === "TOTAL_LESS_THAN");
+        const minCondition = amountRule.conditions.find(
+          cond => cond.method === "TOTAL_MORE_THAN"
+        );
+        const maxCondition = amountRule.conditions.find(
+          cond => cond.method === "TOTAL_LESS_THAN"
+        );
         if (minCondition && minCondition.values?.[0]) {
-          // Stored value = (userInput - 1) * 1,000,000.
-          // Displayed value = (stored value / 1,000,000) + 1.
-          setMinAmount(((Number(minCondition.values[0]) / 1_000_000) + 1).toString());
+          // Stored value = (displayed - 1) * 1,000,000.
+          // Therefore, displayed value = (stored / 1,000,000) + 1.
+          const storedMin = Number(minCondition.values[0]);
+          const displayedMin = ((storedMin + 1) / 1_000_000);
+          // Use toString() (or toFixed if you want decimals) to avoid extra decimals.
+          setMinAmount(displayedMin.toFixed().toString());
         }
         if (maxCondition && maxCondition.values?.[0]) {
-          // Stored value = (userInput + 1) * 1,000,000.
-          // Displayed value = (stored value / 1,000,000) - 1.
-          setMaxAmount(((Number(maxCondition.values[0]) / 1_000_000) - 1).toString());
+          // Stored value = (displayed + 1) * 1,000,000.
+          // Therefore, displayed value = (stored / 1,000,000) - 1.
+          const storedMax = Number(maxCondition.values[0]);
+          const displayedMax = ((storedMax - 1) / 1_000_000);
+          setMaxAmount(displayedMax.toFixed().toString());
         }
       }
       // Get the fee rule, if present.
       const feeRule = settings.rules.find(rule => rule.field === "Fee");
       if (feeRule && feeRule.conditions?.length) {
-        const feeCondition = feeRule.conditions.find(cond => cond.method === "LESS_THAN");
+        const feeCondition = feeRule.conditions.find(
+          cond => cond.method === "LESS_THAN"
+        );
         if (feeCondition && feeCondition.values?.[0]) {
           setMaxFee(feeCondition.values[0]);
         }
@@ -72,17 +83,17 @@ export default function SimpleGlobalSettingsModal({
     const minAmountNumber = Number(minAmount);
     const maxAmountNumber = Number(maxAmount);
 
-    // Save adjusted values: subtract 1 for min and add 1 for max.
+    // Apply transformation: subtract 1 for min and add 1 for max, then multiply by 1,000,000.
     if (minAmount && !isNaN(minAmountNumber)) {
       amountConditions.push({
         method: "TOTAL_MORE_THAN",
-        values: [((minAmountNumber - 1) * 1_000_000).toString()],
+        values: [((minAmountNumber* 1_000_000) - 1).toString()],
       });
     }
     if (maxAmount && !isNaN(maxAmountNumber)) {
       amountConditions.push({
         method: "TOTAL_LESS_THAN",
-        values: [((maxAmountNumber + 1) * 1_000_000).toString()],
+        values: [((maxAmountNumber * 1_000_000) + 1).toString()],
       });
     }
     if (amountConditions.length > 0) {
@@ -155,7 +166,7 @@ export default function SimpleGlobalSettingsModal({
             className={styles.inputField}
             style={{ fontSize: "1rem", padding: "0.75rem" }}
           />
-          {/* Preview displays the direct conversion (without adjustments) */}
+          {/* Preview displays the direct conversion without adjustments */}
           {minAmount && !isNaN(Number(minAmount)) && (
             <small style={{ color: "#555", marginTop: "0.25rem", display: "block" }}>
               {minAmount} ADA = {(Number(minAmount) * 1_000_000).toLocaleString()} lovelace
