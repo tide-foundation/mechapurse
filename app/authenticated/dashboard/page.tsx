@@ -4,11 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
 import { Transaction } from "@/types/Transactions";
-import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
+import { AdminAuthorizationPack, DraftSignRequest } from "@/interfaces/interface";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
 import {
   createAuthorization,
-  addDraftRequest,
   addAdminAuth,
   deleteDraftRequest,
   getTxAuthorization,
@@ -42,7 +41,6 @@ export default function Dashboard() {
   const [pendingTransactions, setPendingTransactions] = useState<DraftSignRequest[]>([]);
 
   const leftColumnRef = useRef<HTMLDivElement>(null);
-  const [leftColumnHeight, setLeftColumnHeight] = useState(0);
 
   const approvalScrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -148,17 +146,6 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, walletAddress]);
 
-  useEffect(() => {
-    if (leftColumnRef.current) {
-      setLeftColumnHeight(leftColumnRef.current.offsetHeight);
-    }
-  }, [walletAddress, walletBalance, transactions]);
-
-  const prettyJson = (jsonString: string) => {
-    const txBody: CardanoTxBody = JSON.parse(jsonString);
-    return JSON.stringify(txBody, (k, v) => v ?? undefined, 2);
-  };
-
   // Updated review handler with notifications, UI refresh, and polling support
   const handleReview = async (draft: DraftSignRequest) => {
     try {
@@ -243,7 +230,7 @@ export default function Dashboard() {
             walletBalance={walletBalance}
             isBalanceLoading={isBalanceLoading}
             router={router}
-            onSend={() => router.push("/transactions/send")}
+            onSend={() => router.push("/authenticated/transactions/send")}
           />
         </div>
         <RecentTransactions

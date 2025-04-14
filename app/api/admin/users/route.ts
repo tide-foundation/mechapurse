@@ -1,7 +1,7 @@
 import { Roles } from "@/app/constants/roles";
 import { Role, User } from "@/interfaces/interface";
 import { RoleRepresentation, UserRepresentation } from "@/lib/keycloakTypes";
-import { getClientRoleByName, GetUserRoleMappings, GetUsers, GrantUserRole } from "@/lib/tidecloakApi";
+import { DeleteUser, getClientRoleByName, GetUserRoleMappings, GetUsers, GrantUserRole, UpdateUser } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
         return {
             ...u,
             id: u.id ?? "",
-            name: u.firstName ?? "",
+            firstName: u.firstName ?? "",
+            lastName: u.lastName ?? "",
             email: u.email ?? "",
             role: userClientRoles,
 
@@ -86,22 +87,37 @@ export async function PUT(req: NextRequest) {
         }
 
         // Parse query parameters
-        const { id, name, email, role } = await req.json();
+        const { id, firstName, lastName, email, role } = await req.json();
 
         role.forEach(async (r: Role) => {
             await GrantUserRole(id, r.name, token);
         })
+
+        await UpdateUser(id, firstName, lastName, email, token)
         return NextResponse.json({ message: "Change Request added for this user role assignment." });
     } catch (error) {
         return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 }
 
-// DELETE: Remove a user
 export async function DELETE(req: NextRequest) {
     try {
+        // Verify authorization token
+        const cookieStore = cookies();
+        const token = (await cookieStore).get("kcToken")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const user = await verifyTideCloakToken(token, allowedRole);
+        if (!user) {
+            return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+        }
         const { id } = await req.json();
         // users = users.filter((user: { id: string; }) => user.id !== id);
+
+        await DeleteUser(id, token)
 
         return NextResponse.json({ success: true });
     } catch (error) {

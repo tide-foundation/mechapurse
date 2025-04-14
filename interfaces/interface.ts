@@ -68,7 +68,8 @@ export interface AdminAuthorizationPack {
 
 export interface User {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string
     email: string;
     role: string[];
     [key: string]: any;

@@ -430,6 +430,47 @@ export const GrantUserRole = async (userId: string, roleName: string, token: str
     return;
 }
 
+export const UpdateUser = async (userId: string, firstName: string, lastName: string, email: string, token: string): Promise<void> => {
+    const user : UserRepresentation[] = await getUserByVuid(userId, token);
+    const updatedUserRep = {...user[0], firstName, lastName, email}
+    if(updatedUserRep === user[0]){
+        return;
+    }
+
+    const response = await fetch(`${TC_URL}/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedUserRep)
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error updating user: ${response.statusText}`);
+        throw new Error(`Error  updating user: ${errorBody}`);
+    }
+
+    return;
+}
+
+export const DeleteUser = async (userId: string, token: string): Promise<void> => {
+    const response = await fetch(`${TC_URL}/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error deleting user: ${response.statusText}`);
+        throw new Error(`Error  deleting user: ${errorBody}`);
+    }
+    
+    return;
+}
 
 export const RemoveUserRole = async (userId: string, roleName: string, token: string): Promise<void> => {
     const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)

@@ -434,7 +434,7 @@ export default function AdminDashboard() {
 
   const updateUser = async (user: User, updatedUser: Partial<UserUpdate>) => {
     try {
-      if (user.name !== updatedUser.name || user.email !== updatedUser.email) {
+      if (user.firstName !== updatedUser.firstName || user.email !== updatedUser.email || user.lastName !== updatedUser.lastName) {
         const res = await fetch(`/api/admin/users`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -812,7 +812,8 @@ export default function AdminDashboard() {
             <table className={styles.dataTable}>
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Firstname</th>
+                  <th>Lastname</th>
                   <th>Email</th>
                   <th>Roles</th>
                 </tr>
@@ -820,7 +821,8 @@ export default function AdminDashboard() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id} onClick={() => openEditUserUpdateModal(user)} style={{ cursor: "pointer" }}>
-                    <td>{user.name}</td>
+                    <td>{user.firstName}</td>
+                    <td>{user.lastName}</td>
                     <td>{user.email}</td>
                     <td>{Array.isArray(user.role) ? user.role.join(", ") : user.role}</td>
                   </tr>

@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import styles from "@/styles/AdminDashboard.module.css";
-import { UserUpdate } from "@/interfaces/interface";
+import { User, UserUpdate } from "@/interfaces/interface";
 import { useAuth } from "../AuthContext";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string[]; // Ensure role is always a string array.
-}
 
 interface Role {
   id: string;
@@ -32,7 +26,8 @@ const UserUpdateModal = ({
   onUpdate,
 }: UserUpdateModalProps) => {
   const {vuid} = useAuth();
-  const [name, setName] = useState(user.name);
+  const [firstName, setFirstName] = useState(user.firstName);
+  const [lastName, setLastName] = useState(user.lastName);
   const [email, setEmail] = useState(user.email);
   // Save the initial roles for later comparison.
   const initialAssignedRoles: string[] = Array.isArray(user.role)
@@ -110,12 +105,22 @@ const UserUpdateModal = ({
         <form onSubmit={handleSubmit}>
           {/* User Details */}
           <div className={styles.inputGroup}>
-            <label className={styles.label}>Name</label>
+            <label className={styles.label}>FirstName</label>
             <input
               type="text"
               className={styles.inputField}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>LastName</label>
+            <input
+              type="text"
+              className={styles.inputField}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               required
             />
           </div>

@@ -82,11 +82,6 @@ export default function SimpleGlobalSettingsModal({
                         marginBottom: "1.5rem",
                     }}
                 >
-                    {/* Set a basic range for <code>Outputs.Amount</code> and an optional fee limit.
-                    <br />
-                    Transactions with <code>Outputs.Address</code> equal to "change" will be excluded.
-                    <br />
-                    Global threshold rules are auto-generated from role rules. */}
                 </p>
                 <div className={styles.inputGroup}>
                     <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
@@ -95,8 +90,13 @@ export default function SimpleGlobalSettingsModal({
                     <input
                         type="number"
                         value={minAmount}
-                        onChange={(e) => setMinAmount(e.target.value)}
-                        placeholder="e.g., 1000000"
+                        onChange={(e) => {
+                            const value = Number(e.target.value);
+                            if (!isNaN(value)) {
+                              setMinAmount((value * 1_000_000).toString());
+                            }
+                          }}                        
+                        placeholder="Enter ADA amount"
                         className={styles.inputField}
                         style={{ fontSize: "1rem", padding: "0.75rem" }}
                     />
@@ -108,8 +108,13 @@ export default function SimpleGlobalSettingsModal({
                     <input
                         type="number"
                         value={maxAmount}
-                        onChange={(e) => setMaxAmount(e.target.value)}
-                        placeholder="e.g., 5000000"
+                        onChange={(e) => {
+                            const value = Number(e.target.value);
+                            if (!isNaN(value)) {
+                              setMaxAmount((value * 1_000_000).toString());
+                            }
+                          }}
+                        placeholder="Enter ADA amount"
                         className={styles.inputField}
                         style={{ fontSize: "1rem", padding: "0.75rem" }}
                     />
@@ -142,17 +147,6 @@ export default function SimpleGlobalSettingsModal({
                         style={{ fontSize: "1rem", padding: "0.75rem" }}
                     />
                 </div>
-                {/* <div className={styles.inputGroup}>
-                    <label className={styles.label} style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                        Exclusion Rule
-                    </label>
-                    <p
-                        className={styles.inputDescription}
-                        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontSize: "1rem", lineHeight: "1.4", marginBottom: "1rem" }}
-                    >
-                        Transactions where <code>Outputs.Address</code> equals your wallet address will be automatically excluded.
-                    </p>
-                </div> */}
                 <div className={styles.modalActions} style={{ display: "flex", justifyContent: "flex-end", gap: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem" }}>
                     <button onClick={onClose} className={styles.secondaryButton} style={{ fontSize: "1rem", padding: "0.6rem 1.2rem", borderRadius: "6px" }}>
                         Cancel
