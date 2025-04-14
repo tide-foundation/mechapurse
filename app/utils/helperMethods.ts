@@ -1,4 +1,5 @@
 import { DraftSignRequest } from "@/interfaces/interface";
+import { GetUsernameForUserId } from "@/lib/db";
 
 export const createAuthorization = async (
   authorizerApproval: string,
@@ -90,3 +91,21 @@ export const addRuleSettingDraftRequest = async (
   if (!response.ok) throw new Error(resp.error || "Unable to create draft");
   return resp.draftReq;
 };
+
+export async function GetUserName(vuid: string): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/dashboard/requests/requestedUser?userId=${encodeURIComponent(vuid)}`);
+
+    if (!res.ok) {
+      console.error(`Failed to fetch username: ${res.statusText}`);
+      return null;
+    }
+
+    const data = await res.json();
+
+    return data?.username ?? null;
+  } catch (err) {
+    console.error("Error fetching username:", err);
+    return null;
+  }
+}

@@ -11,7 +11,6 @@ const db = new Database('./database.sqlite');
 initializeDatabase();
 
 // Row Types
-
 type RuleSettingsRow = {
   id: string;
   rules: string;
@@ -54,6 +53,11 @@ type RuleSettingsAuthorizationRow = {
 
 export function initializeDatabase() {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS userIdentity (
+      userId TEXT PRIMARY KEY,
+      username TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS cardanoTxRequests (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -97,35 +101,33 @@ export function initializeDatabase() {
     );
   `);
 
-  console.log("SQLite database initialized: 'cardanoTxRequests', 'cardanoTxAuthorizations','ruleSettings' and 'ruleSettingsDraft' tables are ready.");
+  console.log("SQLite database initialized: all userId foreign keys removed.");
 }
 
-export function GetRuleConfiguration(): RuleConfiguration | null {
-  const row = db.prepare('SELECT * FROM ruleSettings').get() as RuleSettingsRow | undefined;
-  if (!row) return null;
 
-  return {
-    id: row.id,
-    ruleConfig: {
-      rules: JSON.parse(row.rules),
-      rulesCert: row.rulesCert,
-    },
-  };
-}
-
-export function AddRuleConfiguration(ruleConfig: string, ruleConfigCert: string): void {
-  const id = crypto.randomUUID();
-  const existing = GetRuleConfiguration();
-
-  if (existing?.id) {
-    db.prepare('UPDATE ruleSettings SET rules = ?, rulesCert = ? WHERE id = ?').run(ruleConfig, ruleConfigCert, existing.id);
-  } else {
-    db.prepare('INSERT INTO ruleSettings (id, rules, rulesCert) VALUES (?, ?, ?)').run(id, ruleConfig, ruleConfigCert);
+export function AddUserIdentity(userId: string, username: string): void {
+  const existing = db.prepare('SELECT * FROM userIdentity WHERE userId = ?').get(userId);
+  if (existing) {
+    return;
   }
+
+  db.prepare('INSERT INTO userIdentity (userId, username) VALUES (?, ?)').run(userId, username);
+}
+export function GetUsernameForUserId(userId: string): string | null {
+  const row = db.prepare('SELECT username FROM userIdentity WHERE userId = ?').get(userId) as { username: string } | undefined;
+  return row?.username || null;
 }
 
 export function GetAllDraftSignRequests(): DraftSignRequest[] {
   return db.prepare('SELECT * FROM cardanoTxRequests').all() as DraftSignRequest[];
+}
+
+export function GetAllDraftSignRequestsWithUsernames(): any[] {
+  return db.prepare(`
+    SELECT r.*, u.username 
+    FROM cardanoTxRequests r
+    LEFT JOIN userIdentity u ON r.userId = u.userId
+  `).all();
 }
 
 export function GetDraftSignRequest(id: string): DraftSignRequest | null {
@@ -134,7 +136,7 @@ export function GetDraftSignRequest(id: string): DraftSignRequest | null {
 }
 
 export function GetDraftSignRequestAuthorizations(requestId: string): AdminAuthorizationPack[] {
-  return db.prepare('SELECT authorization FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ?').all(requestId) as AdminAuthorizationPack[];
+  return db.prepare('SELECT * FROM cardanoTxAuthorizations WHERE cardanoTxRequestId = ?').all(requestId) as AdminAuthorizationPack[];
 }
 
 export function GetDraftSignRequestByUser(requestId: string, userId: string): AdminAuthorizationPack | null {
@@ -167,6 +169,30 @@ export function DeleteDraftSignRequest(id: string): void {
 
 export function DeleteAuthorization(id: string): void {
   db.prepare('DELETE FROM cardanoTxAuthorizations WHERE id = ?').run(id);
+}
+
+export function GetRuleConfiguration(): RuleConfiguration | null {
+  const row = db.prepare('SELECT * FROM ruleSettings').get() as RuleSettingsRow | undefined;
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    ruleConfig: {
+      rules: JSON.parse(row.rules),
+      rulesCert: row.rulesCert,
+    },
+  };
+}
+
+export function AddRuleConfiguration(ruleConfig: string, ruleConfigCert: string): void {
+  const id = crypto.randomUUID();
+  const existing = GetRuleConfiguration();
+
+  if (existing?.id) {
+    db.prepare('UPDATE ruleSettings SET rules = ?, rulesCert = ? WHERE id = ?').run(ruleConfig, ruleConfigCert, existing.id);
+  } else {
+    db.prepare('INSERT INTO ruleSettings (id, rules, rulesCert) VALUES (?, ?, ?)').run(id, ruleConfig, ruleConfigCert);
+  }
 }
 
 export function GetRuleSettingsDraft(): RuleSettingDraft[] | null {

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { Roles } from "@/app/constants/roles";
 import { cookies } from "next/headers";
-import { GetAllDraftSignRequests } from "@/lib/db";
+import { GetAllDraftSignRequests, GetDraftSignRequestAuthorizations, GetUsernameForUserId } from "@/lib/db";
+import { AdminAuthorizationPack } from "@/interfaces/interface";
 
 const allowedRoles = [Roles.User, Roles.Admin];
-const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
 
 export async function GET(req: NextRequest) {
     try {
@@ -20,8 +20,32 @@ export async function GET(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        const drafts = await GetAllDraftSignRequests();
+        const signReqDrafts = GetAllDraftSignRequests();
 
+
+        const drafts = await Promise.all(signReqDrafts.map( async (draft) => {
+            const username = GetUsernameForUserId(draft.userId);
+            const authPacks: AdminAuthorizationPack[] = await GetDraftSignRequestAuthorizations(draft.id);
+            const authorizations = Promise.all(authPacks.map(async (auth) => {
+                    const username = await GetUsernameForUserId(auth.userId);
+                    return {...auth, username: username }
+                }));
+            const logs = await Promise.all((await authorizations).map(a => {
+                return {
+                    username: a.username,
+                    action: a.rejected ? "Rejected" : "Approved"
+                }
+            }))
+            
+            return {
+                ...draft,
+                username: username,
+                authPacks: authorizations,
+                logs: logs
+            }
+
+        }))
+        
         return NextResponse.json({ drafts }); // send the drafts in response
     } catch (err) {
         console.error("Internal Server Error:", err);

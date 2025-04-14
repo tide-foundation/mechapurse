@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { Roles } from "@/app/constants/roles";
 import { cookies } from "next/headers";
-import { GetDraftSignRequestAuthorizations, GetUsernameForUserId } from "@/lib/db";
+import { GetDraftSignRequestAuthorizations } from "@/lib/db";
 import { AdminAuthorizationPack } from "@/interfaces/interface";
+import { GetUserName } from "@/app/utils/helperMethods";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
     try {
         let body;
         try {
@@ -31,11 +32,7 @@ export async function POST(req: NextRequest) {
 
         const authPacks: AdminAuthorizationPack[] = await GetDraftSignRequestAuthorizations(id);
 
-        authPacks.map(async (auth) => {
-            const username = await GetUsernameForUserId(auth.userId);
-            return {...auth, username: username }
-        })
-        
+    
 
         return NextResponse.json({ authPacks }); // send the drafts in response
     } catch (err) {

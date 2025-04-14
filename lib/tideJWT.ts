@@ -14,6 +14,7 @@ export interface TokenPayload {
             roles: string[];
         };
     };
+    [key: string]: any;
 }
 
 

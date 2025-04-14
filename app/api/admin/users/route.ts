@@ -31,10 +31,12 @@ export async function GET(req: NextRequest) {
             : [];
 
         return {
+            ...u,
             id: u.id ?? "",
             name: u.firstName ?? "",
             email: u.email ?? "",
-            role: userClientRoles
+            role: userClientRoles,
+
         }
     }));
     return NextResponse.json(users);

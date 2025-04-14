@@ -3,14 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
-import {
-  FaArrowRight,
-  FaArrowLeft,
-  FaWallet,
-  FaCopy,
-  FaCheckCircle,
-  FaClock
-} from "react-icons/fa";
 import { Transaction } from "@/types/Transactions";
 import { AdminAuthorizationPack, CardanoTxBody, DraftSignRequest } from "@/interfaces/interface";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
@@ -54,6 +46,17 @@ export default function Dashboard() {
 
   const approvalScrollRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+
+  const handleTxDelete = async (draft: DraftSignRequest) => {
+    await fetch(`/api/transaction/db/DeleteDraftRequest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({id: draft.id})
+    });
+
+    // Refresh all the data on the screen
+    await fetchWalletData();
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(walletAddress);
@@ -111,9 +114,17 @@ export default function Dashboard() {
 
       if (!transactionsRes.ok) throw new Error(transactionsData.error);
 
+      // Fetch usernames in parallel for each VUID
+      const enrichedPendingTransactions = await Promise.all(
+        pendingTransactionsData.drafts.map(async (tx: any) => {
+          return { ...tx };
+        })
+      );
+
       setWalletBalance(balanceData.available_balance);
       setTransactions(transactionsData.transactions);
-      setPendingTransactions(pendingTransactionsData.drafts);
+      setPendingTransactions(enrichedPendingTransactions)
+
     } catch (error) {
       console.error("Failed to fetch wallet data:", error);
       toast.error("Error loading wallet data");
@@ -122,6 +133,7 @@ export default function Dashboard() {
       setIsTransactionsLoading(false);
     }
   };
+
 
   // Initial fetch and polling
   useEffect(() => {
@@ -245,6 +257,7 @@ export default function Dashboard() {
         scrollRef={approvalScrollRef}
         onScrollLeft={scrollLeft}
         onScrollRight={scrollRight}
+        onDelete={handleTxDelete}
       />
 
       {/* ToastContainer renders the toast notifications */}

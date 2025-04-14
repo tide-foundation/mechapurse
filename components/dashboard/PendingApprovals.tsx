@@ -1,162 +1,213 @@
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
-import { DraftSignRequest } from "@/interfaces/interface";
+import { DraftSignRequest, pendingTxRequestLogs } from "@/interfaces/interface";
 import { useAuth } from "../AuthContext";
+import styles from "@/styles/dashboard/PendingApprovals.module.css";
 
 interface PendingApprovalsProps {
-    pendingTransactions: DraftSignRequest[];
-    onReview: (draft: DraftSignRequest) => void;
-    scrollRef: React.RefObject<HTMLDivElement | null>;
-    onScrollLeft: () => void;
-    onScrollRight: () => void;
+  pendingTransactions: DraftSignRequest[];
+  onReview: (draft: DraftSignRequest) => void;
+  onDelete: (draft: DraftSignRequest) => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onScrollLeft: () => void;
+  onScrollRight: () => void;
 }
 
 interface PendingTransaction {
-    id: string;
-    sender: string;
-    recipients: { address: string; amount: string }[];
-    fee: string;
-    originalTx: DraftSignRequest;
+  id: string;
+  requestedBy: string;
+  recipients: { address: string; amount: string }[];
+  fee: string;
+  originalTx: DraftSignRequest;
+  logs?: pendingTxRequestLogs[];
 }
 
+// Helper: convert lovelace (string) to ADA (string)
+const formatADA = (lovelace: string): string => {
+  const n = Number(lovelace);
+  if (isNaN(n)) return lovelace;
+  return (n / 1e6).toFixed(6);
+};
+
 export default function PendingApprovals({
-    pendingTransactions,
-    onReview,
-    scrollRef,
-    onScrollLeft,
-    onScrollRight,
+  pendingTransactions,
+  onReview,
+  onDelete,
+  scrollRef,
+  onScrollLeft,
+  onScrollRight,
 }: PendingApprovalsProps) {
-    const { walletAddressHex, walletAddress } = useAuth();
+  const { walletAddressHex, walletAddress } = useAuth();
 
-    // Compute a detailed transaction summary for display
-    const txBody = (): PendingTransaction[] => {
-        return pendingTransactions.map((tx) => {
-            const parsedTx = JSON.parse(tx.draftJson);
-            const recipients = parsedTx.outputs
-                .filter(
-                    (output: any) =>
-                        output.address !== walletAddressHex && output.address !== walletAddress
-                )
-                .map((output: any) => ({
-                    address: output.address,
-                    amount: output.amount.coin,
-                }));
-            return {
-                id: tx.id,
-                sender: tx.userId,
-                recipients,
-                fee: parsedTx.fee,
-                originalTx: tx,
-            };
-        });
-    };
+  // Compute a transaction summary for display
+  const txBody = (): PendingTransaction[] => {
+    return pendingTransactions.map((tx) => {
+      const parsedTx = JSON.parse(tx.draftJson);
+      const recipients = parsedTx.outputs
+        .filter(
+          (output: any) =>
+            output.address !== walletAddressHex &&
+            output.address !== walletAddress
+        )
+        .map((output: any) => ({
+          address: output.address,
+          amount: output.amount.coin,
+        }));
+      return {
+        id: tx.id,
+        requestedBy: tx.username!,
+        recipients,
+        fee: parsedTx.fee,
+        originalTx: tx,
+        logs: tx.logs,
+      };
+    });
+  };
 
-    const transactions = txBody();
+  const transactions = txBody();
 
-    return (
-        <div className="mt-10 w-full max-w-7xl pt-8">
-            {/* Main Container */}
-            <div className="app-pending-container relative">
-                <h2 className="text-2xl font-bold mb-4 text-center text-[#0f172a] !pb-6">
-                    Transactions Pending Approval
-                </h2>
-                {transactions.length <= 0 ? (
-                    <div className="flex items-center justify-center h-32">
-                        <p className="text-[#1e293b]">No transactions require approval.</p>
+  // Helper: determine CSS class based on log action
+  const getLogColorClass = (action: string) => {
+    const lower = action.toLowerCase();
+    if (lower.includes("accepted")) return styles.accepted;
+    if (lower.includes("rejected")) return styles.rejected;
+    return styles.neutral;
+  };
+
+  return (
+    <div className="mt-10 w-full max-w-7xl pt-8 mx-auto px-4">
+      <div className={styles.parentContainer}>
+        <h2 className={styles.pageHeader}>Pending Transactions</h2>
+        {transactions.length <= 0 ? (
+          <div className={styles.emptyContainer}>
+            <p className="text-gray-600">No transactions require approval.</p>
+          </div>
+        ) : (
+          <div className={styles.navAndTransContainer}>
+            {/* Left Navigation Button */}
+            <button
+              onClick={onScrollLeft}
+              className={`${styles.navigationButton} ${styles.leftButton}`}
+            >
+              <FaArrowLeft />
+            </button>
+
+            {/* Transaction Detail Cards */}
+            <div className={styles.transactionContainer}>
+              <div ref={scrollRef} className={styles.scrollContainer}>
+                {transactions.map((tx) => (
+                  <div key={tx.id} className={styles.card}>
+                    <div className={styles.cardTitle}>
+                      <h3 className={styles.cardTitleText}>
+                        Transaction Details
+                      </h3>
                     </div>
-                ) : (
-                    <>
-                        {/* Scrollable Horizontal Container */}
-                        <div ref={scrollRef} className="flex gap-4 overflow-x-auto px-6 py-4">
-                            {transactions.map((tx) => (
-                                <div
-                                    key={tx.id}
-                                    className="bg-white w-[380px] h-[420px] p-4 rounded-lg shadow-md border border-gray-800 flex flex-col  transition-colors duration-300"
-                                >
-                                    {/* Scrollable content area */}
-                                    <div className="flex-grow overflow-y-auto space-y-4">
-                                        {/* Transaction ID */}
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">
-                                                Transaction ID
-                                            </p>
-                                            <p className="text-sm font-semibold text-gray-800 break-words">
-                                                {tx.id}
-                                            </p>
-                                        </div>
-
-                                        {/* Sender */}
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">
-                                                From
-                                            </p>
-                                            <p className="text-sm font-medium text-gray-700 break-words">
-                                                {tx.sender}
-                                            </p>
-                                        </div>
-
-                                        {/* Recipients */}
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                                                Recipients
-                                            </p>
-                                            {tx.recipients && tx.recipients.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {tx.recipients.map((recipient, index) => (
-                                                        <div key={index} className="bg-gray-50 p-2 rounded">
-                                                            <p className="text-xs text-gray-500">Address</p>
-                                                            <p className="text-sm font-medium text-gray-800 break-words whitespace-normal">
-                                                                {recipient.address}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500 mt-2">Value</p>
-                                                            <p className="text-sm font-semibold text-blue-600">
-                                                                {recipient.amount}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-sm text-gray-600">
-                                                    No external recipients.
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Fee */}
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">
-                                                Transaction Fee
-                                            </p>
-                                            <p className="text-sm font-medium text-gray-700">{tx.fee}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Review Button */}
-                                    <button
-                                        onClick={() => onReview(tx.originalTx)}
-                                        className="mt-4 py-2 w-full bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-150 hover:ring-2"
-                                    >
-                                        Review &amp; Approve
-                                    </button>
+                    <div className={styles.innerContainer}>
+                      {/* Transaction ID */}
+                      <div className={styles.detailSection}>
+                        <p className={styles.detailTitle}>Transaction ID</p>
+                        <p className={styles.detailContent}>{tx.id}</p>
+                      </div>
+                      {/* Requested By */}
+                      <div className={styles.detailSection}>
+                        <p className={styles.detailTitle}>Requested By</p>
+                        <p className={styles.detailContent}>{tx.requestedBy}</p>
+                      </div>
+                      {/* Recipients */}
+                      <div className={styles.detailSection}>
+                        <p className={styles.detailTitle}>Recipients</p>
+                        {tx.recipients && tx.recipients.length > 0 ? (
+                          <div>
+                            {tx.recipients.map((recipient, index) => (
+                              <div
+                                key={index}
+                                className={styles.recipientContainer}
+                              >
+                                <p className={styles.subDetailTitle}>Address</p>
+                                <p className={styles.detailContent}>
+                                  {recipient.address}
+                                </p>
+                                <p className={styles.subDetailTitle}>Amount</p>
+                                <div className={styles.flexBetween}>
+                                  <span className={styles.detailContent}>
+                                    {recipient.amount} lovelace
+                                  </span>
+                                  <span className={styles.subDetailInfo}>
+                                    (≈ {formatADA(recipient.amount)} ADA)
+                                  </span>
                                 </div>
+                              </div>
                             ))}
+                          </div>
+                        ) : (
+                          <p className={styles.detailContent}>
+                            No external recipients.
+                          </p>
+                        )}
+                      </div>
+                      {/* Transaction Fee */}
+                      <div className={styles.detailSection}>
+                        <p className={styles.detailTitle}>Transaction Fee</p>
+                        <div className={styles.flexBetween}>
+                          <span className={styles.detailContent}>
+                            {tx.fee} lovelace
+                          </span>
+                          <span className={styles.subDetailInfo}>
+                            (≈ {formatADA(tx.fee)} ADA)
+                          </span>
                         </div>
-                        {/* Left Arrow */}
-                        <button
-                            onClick={onScrollLeft}
-                            className="absolute left-2 top-1/2 transform -translate-y-1/2 z-50 p-2 bg-white rounded-full shadow hover:bg-gray-100"
-                        >
-                            <FaArrowLeft className="text-blue-600 transition-colors" />
-                        </button>
-                        {/* Right Arrow */}
-                        <button
-                            onClick={onScrollRight}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 z-50 p-2 bg-white rounded-full shadow hover:bg-gray-100"
-                        >
-                            <FaArrowRight className="text-blue-600 transition-colors" />
-                        </button>
-                    </>
-                )}
+                      </div>
+                      {/* Action Log Section */}
+                      <div className={styles.actionLog}>
+                        <p className={styles.detailTitle}>Action Log</p>
+                        {tx.logs && tx.logs.length > 0 ? (
+                          <ul className={styles.actionLogList}>
+                            {tx.logs.map((log, index) => (
+                              <li key={index}>
+                                <span className="font-semibold">
+                                  {log.username}:
+                                </span>{" "}
+                                <span className={getLogColorClass(log.action)}>
+                                  {log.action}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-gray-600">
+                            No actions recorded yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.actionButtons}>
+                      <button
+                        onClick={() => onReview(tx.originalTx)}
+                        className={styles.reviewButton}
+                      >
+                        Review
+                      </button>
+                      <button
+                        onClick={() => onDelete(tx.originalTx)}
+                        className={styles.deleteButton}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-        </div>
-    );
+
+            {/* Right Navigation Button */}
+            <button
+              onClick={onScrollRight}
+              className={`${styles.navigationButton} ${styles.rightButton}`}
+            >
+              <FaArrowRight />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

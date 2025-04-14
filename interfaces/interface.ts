@@ -29,6 +29,14 @@ export interface DraftSignRequest {
     draft: string,
     draftJson: string,
     expiry: string,
+    username?: string,
+    logs?: pendingTxRequestLogs[]
+    authPacks?: AdminAuthorizationPack[]
+}
+
+export interface pendingTxRequestLogs{
+    username: string;
+    action: string;
 }
 
 export interface RuleSettingDraft {
@@ -53,7 +61,8 @@ export interface AdminAuthorizationPack {
     userId: string,
     cardanoTxRequestId: string,
     authorization: string,
-    rejected: boolean
+    rejected: boolean,
+    username?: string,
 
 }
 
@@ -62,6 +71,7 @@ export interface User {
     name: string;
     email: string;
     role: string[];
+    [key: string]: any;
 }
 
 export interface UserUpdate extends User {
