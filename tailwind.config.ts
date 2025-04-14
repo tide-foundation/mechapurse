@@ -19,7 +19,7 @@ module.exports = {
             },
             fontFamily: {
                 hud: ["Orbitron", "monospace"],
-                body: ["Inter", "sans-serif"],
+                body: ["sans-serif"],
             },
             // boxShadow: {
             //     glow: "0 0 8px rgba(77, 168, 218, 0.8)",
