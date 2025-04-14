@@ -141,7 +141,7 @@ export const signTx = async (message: string, roleId: string, token: string): Pr
 };
 
 export const getTransactionRoles = async (token: string): Promise<RoleRepresentation[]> => {
-    const client: ClientRepresentation | null = await getClientByClientId(TX_MANAGEMENT_CLIENT, token); // TODO: add to constants 
+    const client: ClientRepresentation | null = await getClientByClientId(TX_MANAGEMENT_CLIENT, token);
     if (client === null) {
         return [];
     }
@@ -155,6 +155,29 @@ export const getTransactionRoles = async (token: string): Promise<RoleRepresenta
     if (!response.ok) {
         console.error(`Error fetching transaction roles: ${response.statusText}`);
         return [];
+    }
+    const roleRes:RoleRepresentation[] = await response.json();
+    const roles: RoleRepresentation[] = await Promise.all(roleRes.map(async (r) => {
+        return await getRoleById(r!.id!, token);
+    }))
+    return roles;
+};
+
+export const getRoleById = async (roleId: string, token: string): Promise<RoleRepresentation> => {
+    const client: ClientRepresentation | null = await getClientByClientId(TX_MANAGEMENT_CLIENT, token);
+    if (client === null) {
+        return {};
+    }
+    const response = await fetch(`${TC_URL}/roles-by-id/${roleId}`, {
+        method: 'GET',
+        headers: {
+            accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) {
+        console.error(`Error fetching transaction roles: ${response.statusText}`);
+        return {};
     }
     return await response.json();
 };
@@ -472,6 +495,50 @@ export const DeleteUser = async (userId: string, token: string): Promise<void> =
     return;
 }
 
+export const DeleteRole = async (roleName: string, token: string): Promise<void> => {
+    const client: ClientRepresentation| null = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
+    const response = await fetch(`${TC_URL}/clients/${client!.id!}/roles/${roleName}`, {
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error deleting role: ${response.statusText}`);
+        throw new Error(`Error  deleting role: ${errorBody}`);
+    }
+    
+    return;
+}
+
+export const UpdateRole = async (roleRep: RoleRepresentation, token: string): Promise<void> => {
+    const client: ClientRepresentation| null = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
+    const role = await getClientRoleByName(roleRep.name!, client!.id!, token);
+    if(roleRep === role){
+        return;
+    }
+
+    const response = await fetch(`${TC_URL}/clients/${client!.id!}/roles/${roleRep.name!}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(roleRep)
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error updating role: ${response.statusText}`);
+        throw new Error(`Error  updating role: ${errorBody}`);
+    }
+
+    return;
+}
+
+
 export const RemoveUserRole = async (userId: string, roleName: string, token: string): Promise<void> => {
     const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
     if (client === null || client?.id === undefined) {
@@ -677,6 +744,3 @@ export const GetTideLinkUrl = async (userId: string, token: string, redirect_uri
 
     return await response.text();
 };
-
-
-

@@ -395,7 +395,7 @@ export default function AdminDashboard() {
     try {
       let res;
       if (roleToEdit) {
-        res = await fetch(`/api/admin/roles/${roleToEdit.id}`, {
+        res = await fetch(`/api/admin/roles`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(role),
@@ -415,9 +415,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteRole = async (roleId: string) => {
+  const deleteRole = async (roleName: string) => {
     try {
-      const res = await fetch(`/api/admin/roles/${roleId}`, {
+      const res = await fetch(`/api/admin/roles?roleName=${roleName}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete role");
@@ -757,6 +757,9 @@ export default function AdminDashboard() {
               <h3 className={styles.sectionTitle}>Role-Based Validation Rules</h3>
               {roles.length > 0 ? (
                 roles.map((role) => {
+                  if(!role.isAuthorizer){
+                    return null;
+                  }
                   const roleKey =
                     role.clientRole && role.clientId
                       ? `resource_access.${role.clientId}.roles.${role.name}`
@@ -873,7 +876,7 @@ export default function AdminDashboard() {
                         <button onClick={() => openEditRoleModal(role)} className={styles.iconButton} title="Edit Role">
                           <FaEdit />
                         </button>
-                        <button onClick={() => deleteRole(role.id)} className={styles.iconButton} title="Delete Role">
+                        <button onClick={() => deleteRole(role.name)} className={styles.iconButton} title="Delete Role">
                           <FaTrash />
                         </button>
                       </td>
@@ -1071,16 +1074,14 @@ const SidebarButton = ({ onClick, icon, text, badge, active }: SidebarButtonProp
   );
 };
 
-// --- Role Modal Component ---
-const RoleModal = ({
-  role,
-  onClose,
-  onSave,
-}: {
+interface RoleModalProps {
   role: Role | null;
   onClose: () => void;
   onSave: (role: Partial<Role>) => void;
-}) => {
+}
+
+// --- Role Modal Component ---
+const RoleModal = ({ role, onClose, onSave }: RoleModalProps) => {
   const [name, setName] = useState(role?.name || "");
   const [description, setDescription] = useState(role?.description || "");
   const [isAuthorizer, setIsAuthorizer] = useState<boolean>(!!role?.isAuthorizer);
@@ -1111,7 +1112,13 @@ const RoleModal = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Administrator"
               required
-              style={{ fontSize: "1.1rem", padding: "0.75rem" }}
+              disabled={Boolean(role)}  // Disable when editing
+              style={{
+                fontSize: "1.1rem",
+                padding: "0.75rem",
+                backgroundColor: role ? "#f0f0f0" : undefined, // optional visual cue for disabled state
+                cursor: role ? "not-allowed" : "text"
+              }}
             />
           </div>
           <div className={styles.inputGroup} style={{ marginBottom: "1.5rem" }}>

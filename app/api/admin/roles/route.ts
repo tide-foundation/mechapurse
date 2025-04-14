@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addAuthorizerInfo, createRoleForClient, createTxMgmtClient, getClientByClientId, getClientById, getClientRoleByName, getTransactionRoles, markAsAuthorizerRole } from "@/lib/tidecloakApi";
+import { addAuthorizerInfo, createRoleForClient, createTxMgmtClient, DeleteRole, getClientByClientId, getClientById, getClientRoleByName, getTransactionRoles, markAsAuthorizerRole, UpdateRole } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { cookies } from "next/headers";
 import { Roles } from "@/app/constants/roles";
@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("all");
 
     const roles: RoleRepresentation[] = await getTransactionRoles(token);
+    console.log(roles)
 
     const formattedRoles = await Promise.all(
       roles.map(async (r) => {
@@ -105,3 +106,77 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    // Verify authorization token
+    const cookieStore = cookies();
+    const token = (await cookieStore).get("kcToken")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await verifyTideCloakToken(token, allowedRole);
+    if (!user) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+    }
+
+    const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token);
+    if (client === null) {
+      await createTxMgmtClient(token)
+    }
+    const clientId = (await getClientByClientId(TX_MANAGEMENT_CLIENT, token))?.id;
+
+
+    const roleInfo: Partial<Role> = await req.json();
+    const roleRep: RoleRepresentation = {
+      name: roleInfo.name,
+      description: roleInfo.description
+
+
+    }
+    await UpdateRole(roleRep, token);
+
+    if (
+      roleInfo.isAuthorizer
+    ) {
+      const addedRole: RoleRepresentation = await getClientRoleByName(roleInfo.name!, clientId!, token);
+      await markAsAuthorizerRole(addedRole.id!, token);
+    }
+    return NextResponse.json({ success: "Role has been added!" });
+
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    // Verify authorization token
+    const cookieStore = cookies();
+    const token = (await cookieStore).get("kcToken")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await verifyTideCloakToken(token, allowedRole);
+    if (!user) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const roleName = searchParams.get("roleName");
+    if ( roleName === null) {
+      return NextResponse.json({ error: "RoleName was not provided." }, { status: 400 });
+    }
+    await DeleteRole(roleName, token);
+
+    return NextResponse.json({ success: "Role has been deleted!" });
+
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
