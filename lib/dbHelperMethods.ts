@@ -33,6 +33,16 @@ export const addAdminAuth = async (id: string, vuid: string, authorization: stri
     return data;
 };
 
+export const getCurrentRuleSettings = async () => {
+    const res = await fetch("/api/rules", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    return data;
+};
+
 export const deleteDraftRequest = async (id: string) => {
     const res = await fetch("/api/transaction/db/DeleteDraftRequest", {
         method: "POST",

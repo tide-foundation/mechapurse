@@ -12,6 +12,8 @@ import { useAuth } from "@/components/AuthContext";
 import { CardanoTxBody, DraftSignRequest } from "@/interfaces/interface.js";
 import { processThresholdRules } from "@/lib/IAMService.js";
 import { transformCardanoTxBody } from "@/app/utils/helperMethods";
+import { getCurrentRuleSettings } from "@/lib/dbHelperMethods";
+import { toast } from "react-toastify";
 
 export default function Send() {
   const {
@@ -122,6 +124,24 @@ export default function Send() {
       });
 
       const data = await response.json();
+      const config = await getCurrentRuleSettings();
+
+      const isProcessAllowed = await canProcessRequest(
+        config.ruleSettings.rules,
+        transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+      );
+      const requestSettings = await processThresholdRules(
+        config.ruleSettings.rules,
+        transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
+      );
+
+      // If the transaction is not yet ready to be processed, notify the user
+      if (!isProcessAllowed) {
+        const msg = `Transaction request created. You're not authorized to sign — awaiting approval from authorized user(s). (${requestSettings!.threshold} signature(s) required.)`;
+        toast.info(msg);
+        return;
+      }
+
       const txbody = data.data;
       if (!response.ok) throw new Error(data.error || "Transaction failed");
 
@@ -146,23 +166,14 @@ export default function Send() {
           authApproval.data,
           authzAuthn
         );
-        await addAdminAuth(draftReq.id, vuid, authData.authorization, true);
+        await addAdminAuth(draftReq.id, vuid, authData.authorization, false);
 
-        const isProcessAllowed = await canProcessRequest(
-          authData.ruleSettings.rules,
-          transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
-        );
-        const requestSettings = await processThresholdRules(
-          authData.ruleSettings.rules,
-          transformCardanoTxBody(walletAddress, walletAddressHex, data.draftJson)
-        );
-        console.log(isProcessAllowed);
+
         if (
-          !isProcessAllowed ||
           (requestSettings !== null && requestSettings.threshold > 1)
         ) {
           setTransactionResult(
-            `Transaction request created and is pending ${requestSettings!.threshold} signature(s).`
+            `Transaction request created and is pending ${requestSettings!.threshold - 1} signature(s).`
           );
           return;
         }

@@ -11,6 +11,7 @@ import {
   addAdminAuth,
   deleteDraftRequest,
   getTxAuthorization,
+  getCurrentRuleSettings,
 } from "@/lib/dbHelperMethods";
 import WalletInfo from "@/components/dashboard/WalletInfo";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
@@ -156,40 +157,47 @@ export default function Dashboard() {
       });
       if (!resp.ok) throw new Error("Failed to fetch uri");
       const data = await resp.json();
+      const config = await getCurrentRuleSettings();
 
-      const expiry = draft.expiry;
-      const heimdall = new Heimdall(data.uri, [vuid]);
-      await heimdall.openEnclave();
-      const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
+      const isProcessAllowed = await canProcessRequest(
+        config.ruleSettings.rules,
+        transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
+      );
+      const requestSettings = await processThresholdRules(
+        config.ruleSettings.rules,
+        transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
+      );
 
-      if (authApproval.accepted === true) {
-        const authzAuthn = await heimdall.getAuthorizerAuthentication();
-        heimdall.closeEnclave();
+      // If the transaction is not yet ready to be processed, notify the user
+      if (!isProcessAllowed) {
+        const msg = `Transaction request created. You're not authorized to sign — awaiting approval from authorized user(s). (${requestSettings!.threshold} signature(s) required.)`;
+        toast.info(msg);
+        return;
+      }
+      const auths: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
+      const authzList = auths.map((a) => a.authorization);
 
-        const authData = await createAuthorization(authApproval.data, authzAuthn);
-        await addAdminAuth(draft.id, vuid, authData.authorization);
-
-        const auths: AdminAuthorizationPack[] = await getTxAuthorization(draft.id);
-        const authzList = auths.map((a) => a.authorization);
-
-        const isProcessAllowed = await canProcessRequest(
-          authData.ruleSettings.rules,
-          transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
-        );
-        const requestSettings = await processThresholdRules(
-          authData.ruleSettings.rules,
-          transformCardanoTxBody(walletAddress, walletAddressHex, draft.draftJson)
-        );
-
-        // If the transaction is not yet ready to be processed, notify the user
-        if (!isProcessAllowed || (requestSettings !== null && requestSettings.threshold !== authzList.length)) {
-          const remaining = requestSettings ? requestSettings.threshold - authzList.length : 0;
-          toast.info(`Transaction request created, requires ${remaining} more signature(s)!`);
-          return;
-        }
-
+      if(requestSettings !== null && authzList.length  < requestSettings.threshold) {
+        const expiry = draft.expiry;
+        const heimdall = new Heimdall(data.uri, [vuid]);
+        await heimdall.openEnclave();
+        const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
+  
+        if (authApproval.accepted === true) {
+          const authzAuthn = await heimdall.getAuthorizerAuthentication();
+          heimdall.closeEnclave();
+  
+          const authData = await createAuthorization(authApproval.data, authzAuthn);
+          const authorization = await addAdminAuth(draft.id, vuid, authData.authorization);
+          authzList.push(authorization.auth)
+      }
+      if(authzList.length  < requestSettings.threshold){
+        const remaining = requestSettings ? requestSettings.threshold - authzList.length : 0;
+        toast.info(`Transaction request created, requires ${remaining} more signature(s)!`);
+        return;
+      }
         // Finalize and sign the transaction
-        const sig = await signTxDraft(draft.txBody, authzList, authData.ruleSettings, expiry);
+        const sig = await signTxDraft(draft.txBody, authzList, config.ruleSettings, expiry);
         const response = await fetch("/api/transaction/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -201,10 +209,8 @@ export default function Dashboard() {
 
         // Remove the draft after a successful transaction
         await deleteDraftRequest(draft.id);
-
         // Notify success to the user
         toast.success("Transaction sent successfully!");
-
         // Refresh all the data on the screen
         await fetchWalletData();
       }
