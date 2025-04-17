@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
         const user = await verifyTideCloakToken(token, allowedRoles);
         if (!user) throw new Error("Invalid token");
 
-        console.log("REJECTED " + rejected)
         AddAuthorization(id, vuid, authorization, rejected);
 
         return NextResponse.json({ auth: authorization });

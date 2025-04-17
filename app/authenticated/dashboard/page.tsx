@@ -184,18 +184,23 @@ export default function Dashboard() {
         const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
   
         if (authApproval.accepted === true) {
-          const authzAuthn = await heimdall.getAuthorizerAuthentication();
           heimdall.closeEnclave();
-  
+          const authzAuthn = await heimdall.getAuthorizerAuthentication();  
           const authData = await createAuthorization(authApproval.data, authzAuthn);
-          const authorization = await addAdminAuth(draft.id, vuid, authData.authorization);
+          const authorization = await addAdminAuth(draft.id, vuid, authData.authorization, false);
           authzList.push(authorization.auth)
-      }
-      if(authzList.length  < requestSettings.threshold){
-        const remaining = requestSettings ? requestSettings.threshold - authzList.length : 0;
-        toast.info(`Transaction request created, requires ${remaining} more signature(s)!`);
-        return;
-      }
+        } else {
+          heimdall.closeEnclave();
+          await addAdminAuth(draft.id, vuid, "", true);
+          toast.info("Request denied. Your response has been logged.");
+          return;
+        }
+
+        if(authzList.length  < requestSettings.threshold){
+          const remaining = requestSettings ? requestSettings.threshold - authzList.length : 0;
+          toast.info(`Transaction request created, requires ${remaining} more signature(s)!`);
+          return;
+        }
         // Finalize and sign the transaction
         const sig = await signTxDraft(draft.txBody, authzList, config.ruleSettings, expiry);
         const response = await fetch("/api/transaction/send", {

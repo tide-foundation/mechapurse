@@ -11,28 +11,54 @@ interface UserChangeRequestCardProps {
 }
 
 /**
- * Returns a status badge element with background color based on the status.
- * DRAFT → grey, PENDING → orange, APPROVED → green, DENIED → red.
+ * Returns a status badge element with background color based on the status or deleteStatus.
+ * 
+ * Status mapping:
+ * - DRAFT → grey
+ * - PENDING → orange
+ * - APPROVED → green
+ * - DENIED → red
+ * - ACTIVE → blue (default), or if deleteStatus is provided, maps deleteStatus colors.
  */
-function getStatusBadge(status: string) {
-    let backgroundColor = "#ccc"; // default for DRAFT
-    if (status === "PENDING") backgroundColor = "#ffa500";
-    else if (status === "APPROVED") backgroundColor = "#4caf50";
-    else if (status === "DENIED") backgroundColor = "#d32f2f";
+function getStatusBadge(status: string, deleteStatus?: string) {
+    // Default to blue for ACTIVE or any unrecognized status
+    let displayStatus = status;
+    let backgroundColor = "#2196f3";
+  
+    // Color mapping for standard statuses
+    const colorMap: { [key: string]: string } = {
+      DRAFT: "#ccc",
+      PENDING: "#ffa500",
+      APPROVED: "#4caf50",
+      DENIED: "#d32f2f",
+    };
+  
+    if (status === "ACTIVE") {
+      if (deleteStatus && colorMap[deleteStatus]) {
+        // If an active item has a delete workflow, use its delete status
+        displayStatus = deleteStatus;
+        backgroundColor = colorMap[deleteStatus];
+      }
+    } else if (colorMap[status]) {
+      // For non-ACTIVE statuses, use the direct mapping
+      backgroundColor = colorMap[status];
+    }
+  
     return (
-        <span
-            style={{
-                backgroundColor,
-                color: "#fff",
-                padding: "0.3rem 0.6rem",
-                borderRadius: "100px",
-                fontWeight: "bold",
-            }}
-        >
-            {status}
-        </span>
+      <span
+        style={{
+          backgroundColor,
+          color: "#fff",
+          padding: "0.3rem 0.6rem",
+          borderRadius: "100px",
+          fontWeight: "bold",
+        }}
+      >
+        {displayStatus}
+      </span>
     );
-}
+  }
+  
 
 const UserChangeRequestCard = ({ changeRequest, onSelect, selected }: UserChangeRequestCardProps) => {
     const records: UserChangeRecord[] = changeRequest.userRecord || [];
@@ -54,7 +80,7 @@ const UserChangeRequestCard = ({ changeRequest, onSelect, selected }: UserChange
                         <strong>Action:</strong> {changeRequest.action || "N/A"}
                     </div>
                     <div>
-                        <strong>Status:</strong> {getStatusBadge(changeRequest.status || "DRAFT")}
+                        <strong>Status:</strong> {getStatusBadge(changeRequest.status || "DRAFT", changeRequest.deleteStatus)}
                     </div>
                     <div>
                         <strong>Role:</strong> {changeRequest.role || "N/A"}

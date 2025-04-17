@@ -22,11 +22,11 @@ export const addDraftRequest = async (vuid: string, data: string, dataJson: stri
     return resp.draftReq;
 };
 
-export const addAdminAuth = async (id: string, vuid: string, authorization: string) => {
+export const addAdminAuth = async (id: string, vuid: string, authorization: string, rejected: boolean) => {
     const res = await fetch("/api/transaction/db/AddAdminAuth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, vuid, authorization }),
+        body: JSON.stringify({ id, vuid, authorization, rejected }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);

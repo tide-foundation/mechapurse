@@ -542,10 +542,11 @@ export const UpdateRole = async (roleRep: RoleRepresentation, token: string): Pr
 export const RemoveUserRole = async (userId: string, roleName: string, token: string): Promise<void> => {
     const client = await getClientByClientId(TX_MANAGEMENT_CLIENT, token)
     if (client === null || client?.id === undefined) {
-        throw new Error(`Could not grant user role, client ${TX_MANAGEMENT_CLIENT} does not exist`);
+        throw new Error(`Could not remove user role, client ${TX_MANAGEMENT_CLIENT} does not exist`);
     }
 
     const role = await getClientRoleByName(roleName, client.id, token);
+
 
     const response = await fetch(`${TC_URL}/users/${userId}/role-mappings/clients/${client.id}`, {
         method: 'DELETE',
@@ -553,7 +554,7 @@ export const RemoveUserRole = async (userId: string, roleName: string, token: st
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(role)
+        body: JSON.stringify([{id: role.id, name: role.name}])
     });
     if (!response.ok) {
         const errorBody = await response.text();

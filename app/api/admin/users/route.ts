@@ -1,7 +1,8 @@
 import { Roles } from "@/app/constants/roles";
 import { Role, User } from "@/interfaces/interface";
+import { AddUserIdentity } from "@/lib/db";
 import { RoleRepresentation, UserRepresentation } from "@/lib/keycloakTypes";
-import { DeleteUser, getClientRoleByName, GetUserRoleMappings, GetUsers, GrantUserRole, UpdateUser } from "@/lib/tidecloakApi";
+import { DeleteUser, getClientRoleByName, getUserByVuid, GetUserRoleMappings, GetUsers, GrantUserRole, RemoveUserRole, UpdateUser } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
@@ -59,18 +60,24 @@ export async function POST(req: NextRequest) {
         }
 
         // Parse query parameters
-        const { id, name, email, rolesToAdd, rolesToRemove } = await req.json();
+        const { id, username, rolesToAdd, rolesToRemove, vuid } = await req.json();
+
 
         rolesToAdd.forEach(async (r: string) => {
             await GrantUserRole(id, r, token);
         })
-        return NextResponse.json({ message: "Change Request added for this user role assignment." });
+        rolesToRemove.forEach(async (r: string) => {
+            await RemoveUserRole(id, r, token);
+        })
+
+        AddUserIdentity(vuid, username);
+
+        return NextResponse.json({ message: "Change Request added for this user role update." });
     } catch (error) {
         return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 }
 
-// PUT: Update an existing user
 export async function PUT(req: NextRequest) {
     try {
         // Verify authorization token
@@ -87,14 +94,10 @@ export async function PUT(req: NextRequest) {
         }
 
         // Parse query parameters
-        const { id, firstName, lastName, email, role } = await req.json();
-
-        role.forEach(async (r: Role) => {
-            await GrantUserRole(id, r.name, token);
-        })
+        const { id, firstName, lastName, email  } = await req.json();
 
         await UpdateUser(id, firstName, lastName, email, token)
-        return NextResponse.json({ message: "Change Request added for this user role assignment." });
+        return NextResponse.json({ message: "Change Request added for this user role update." });
     } catch (error) {
         return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }

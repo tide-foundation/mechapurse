@@ -72,11 +72,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               icon={<FaPaperPlane />}
               text="Send"
             />
-            <NavButton
+            {/* <NavButton
               onClick={() => router.push("/authenticated/transactions/history")}
               icon={<FaHistory />}
               text="History"
-            />
+            /> */}
             <NavButton onClick={handleLogout} icon={<FaSignOutAlt />} text="Logout" />
           </nav>
         </div>

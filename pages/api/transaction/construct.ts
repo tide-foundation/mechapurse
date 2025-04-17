@@ -7,7 +7,6 @@ import { getPublicKey } from "@/lib/tidecloakConfig";
 import { createApprovalURI } from "@/lib/tidecloakApi";
 import { loadCardanoWasm } from "@/config/cardanoWasmConfig";
 import { parseCookies } from "@/lib/utils";
-import { AddUserIdentity } from "@/lib/db";
 
 const allowedRoles = [Roles.User, Roles.Admin];
 const KOIOS_API_URL = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
@@ -48,8 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const user = await verifyTideCloakToken(token, allowedRoles);
     if (!user) return res.status(401).json({ error: "Invalid token" });
-    AddUserIdentity(user.vuid!, user.preferred_username!);
-
 
     // Construct sender address
     const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));

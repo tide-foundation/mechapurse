@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("all");
 
     const roles: RoleRepresentation[] = await getTransactionRoles(token);
-    console.log(roles)
 
     const formattedRoles = await Promise.all(
       roles.map(async (r) => {

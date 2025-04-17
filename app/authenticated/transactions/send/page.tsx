@@ -9,10 +9,9 @@ import {
 import { ImSpinner8 } from "react-icons/im";
 import { Heimdall } from "@/tide-modules/modules/heimdall";
 import { useAuth } from "@/components/AuthContext";
-import { CardanoTxBody, DraftSignRequest } from "@/interfaces/interface.js";
-import { processThresholdRules } from "@/lib/IAMService.js";
+import { DraftSignRequest } from "@/interfaces/interface.js";
 import { transformCardanoTxBody } from "@/app/utils/helperMethods";
-import { getCurrentRuleSettings } from "@/lib/dbHelperMethods";
+import { addAdminAuth, getCurrentRuleSettings } from "@/lib/dbHelperMethods";
 import { toast } from "react-toastify";
 
 export default function Send() {
@@ -67,23 +66,6 @@ export default function Send() {
     const resp = await response.json();
     if (!response.ok) throw new Error(resp.error || "Unable to create draft");
     return resp.draftReq;
-  };
-
-  const addAdminAuth = async (
-    id: string,
-    vuid: string,
-    authorization: string,
-    rejected: boolean
-  ): Promise<DraftSignRequest> => {
-    const response = await fetch("/api/transaction/db/AddAdminAuth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, vuid, authorization, rejected }),
-    });
-
-    const resp = await response.json();
-    if (!response.ok) throw new Error(resp.error || "Unable to create auth");
-    return resp;
   };
 
   const deleteDraftRequest = async (id: string): Promise<string> => {
@@ -159,8 +141,8 @@ export default function Send() {
       );
 
       if (authApproval.accepted === true) {
-        const authzAuthn = await heimdall.getAuthorizerAuthentication();
         heimdall.closeEnclave();
+        const authzAuthn = await heimdall.getAuthorizerAuthentication();
 
         const authData = await createAuthorization(
           authApproval.data,
@@ -196,12 +178,20 @@ export default function Send() {
           throw new Error(sentResp.error || "Transaction failed");
         }
 
+        await deleteDraftRequest(draftReq.id);
+
         // Display a succinct receipt message with the TX hash.
         setTransactionResult(
           `Transaction successfully submitted! Receipt (TX Hash): ${sentResp.txHash}`
         );
-        await deleteDraftRequest(draftReq.id);
       }
+      else {
+        heimdall.closeEnclave();
+        await addAdminAuth(draftReq.id, vuid, "", true);
+        toast.info("Request denied. Your response has been logged.");
+        return;
+      }
+
     } catch (err: any) {
       let errorMessage: string;
       if (typeof err === "string") {

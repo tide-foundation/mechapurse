@@ -71,7 +71,7 @@ const ModalWrapper = ({ children }: { children: React.ReactNode }) => {
   return createPortal(children, document.body);
 };
 
-// --- New Action Bar for Change Requests ---
+// --- New Action Bar for Change Requests with deleteStatus support ---
 const ChangeRequestActionBar = ({
   selectedCR,
   onReview,
@@ -83,26 +83,50 @@ const ChangeRequestActionBar = ({
   onCommit: () => void;
   onCancel: () => void;
 }) => {
+  // Extract statuses
   const status = selectedCR?.status || "";
-  const canReview = status === "DRAFT" || status === "PENDING";
-  const canCommit = status === "APPROVED";
+  const deleteStatus = selectedCR?.deleteStatus || "";
+
+  // Determine which status to use (handling delete workflows for ACTIVE items)
+  const effectiveStatus =
+    status === "ACTIVE" && deleteStatus
+      ? deleteStatus
+      : status;
+
+  // Actions availability based on the effective status
+  const canReview = effectiveStatus === "DRAFT" || effectiveStatus === "PENDING";
+  const canCommit = effectiveStatus === "APPROVED";
+
   return (
     <div
       className={styles.actionBar}
       style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}
     >
-      <button onClick={onReview} disabled={!selectedCR || !canReview} className={styles.reviewButton}>
+      <button
+        onClick={onReview}
+        disabled={!selectedCR || !canReview}
+        className={styles.reviewButton}
+      >
         Review
       </button>
-      <button onClick={onCommit} disabled={!selectedCR || !canCommit} className={styles.commitButton}>
+      <button
+        onClick={onCommit}
+        disabled={!selectedCR || !canCommit}
+        className={styles.commitButton}
+      >
         Commit
       </button>
-      <button onClick={onCancel} disabled={!selectedCR} className={styles.cancelButton}>
+      <button
+        onClick={onCancel}
+        disabled={!selectedCR}
+        className={styles.cancelButton}
+      >
         Cancel
       </button>
     </div>
   );
 };
+
 
 // --- Interfaces for Change Requests ---
 interface ChangeRequest {
@@ -590,11 +614,13 @@ export default function AdminDashboard() {
       );
       if (authorizerApproval.draft === res.changeSetRequests) {
         if (authorizerApproval.accepted === false) {
+          heimdall.closeEnclave();
           await fetch("/api/admin/change-requests/addRejection", {
             method: "POST",
             body: JSON.stringify({ changeRequest: changeRequest }),
           });
         } else if (authorizerApproval.accepted === true) {
+          heimdall.closeEnclave();
           const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
           await fetch("/api/admin/change-requests/addAuthorization", {
             method: "POST",
@@ -606,7 +632,6 @@ export default function AdminDashboard() {
           });
         }
       }
-      heimdall.closeEnclave();
     } else if (cr.type === "rules") {
       const response = await fetch(`/api/admin/change-requests/rules`, {
         method: "POST",
@@ -624,11 +649,13 @@ export default function AdminDashboard() {
       );
       if (authorizerApproval.draft === res.draft) {
         if (authorizerApproval.accepted === false) {
+          heimdall.closeEnclave();
           await fetch("/api/admin/change-requests/rules/authorization", {
             method: "POST",
             body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorization: null, rejected: true }),
           });
         } else if (authorizerApproval.accepted === true) {
+          heimdall.closeEnclave();
           const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
           const data = await createAuthorization(authorizerApproval.data, authorizerAuthentication, "rules");
 
@@ -638,7 +665,6 @@ export default function AdminDashboard() {
           });
         }
       }
-      heimdall.closeEnclave();
     }
     await fetchUserChangeRequests();
     await fetchRulesChangeRequests();

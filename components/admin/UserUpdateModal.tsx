@@ -70,6 +70,8 @@ const UserUpdateModal = ({
       role: assignedRoles,
       rolesToAdd,
       rolesToRemove,
+      vuid: user.attributes["vuid"][0],
+      username: user.username
     });
   };
 
