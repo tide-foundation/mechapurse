@@ -6,4 +6,4 @@ A secure, privacy-first wallet application built with **Next.js (TypeScript)** a
 
 This app leverages **Tide Foundation**'s decentralized key management system
 
-.......
+.......TBC
