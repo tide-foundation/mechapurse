@@ -3,7 +3,7 @@
     "accessTokenLifespan": 600,
     "enabled": true,
     "sslRequired": "external",
-    "registrationAllowed": true,
+    "registrationAllowed": false,
     "duplicateEmailsAllowed": true,
     "roles": {
         "realm": [
