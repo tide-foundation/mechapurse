@@ -20,27 +20,17 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libssl-dev jq
 
-      - name: Clone required modules
+      - name: Clone required modules into local project
         run: |
           git clone https://github.com/tide-foundation/tide-js.git
           cd tide-js && git checkout origin/staging && cd ..
 
-          git clone https://github.com/tide-foundation/tidecloak-js.git
-          cd tidecloak-js && git checkout origin/staging && cd ..
+          mkdir -p external
+          git clone https://github.com/tide-foundation/tidecloak-js.git external/tidecloak-js
+          cd external/tidecloak-js && git checkout origin/staging && cd ../..
 
           git clone https://github.com/tide-foundation/heimdall.git
           cd heimdall && git checkout origin/staging && cd ..
-
-      - name: Patch tidecloak-js exports for deep import
-        run: |
-          jq '.exports["./lib/heimdall"] = "./lib/heimdall.js"' tidecloak-js/package.json > temp.json && mv temp.json tidecloak-js/package.json
-
-      - name: Link tidecloak-js globally and locally
-        run: |
-          cd tidecloak-js
-          npm link
-          cd ..
-          npm link tidecloak-js
 
       - name: Prepare tide-modules
         run: |
