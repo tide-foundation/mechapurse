@@ -18,18 +18,22 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libssl-dev
+          sudo apt-get install -y libssl-dev jq
 
       - name: Clone required modules
         run: |
           git clone https://github.com/tide-foundation/tide-js.git
           cd tide-js && git checkout origin/staging && cd ..
-          
+
           git clone https://github.com/tide-foundation/tidecloak-js.git
           cd tidecloak-js && git checkout origin/staging && cd ..
-          
+
           git clone https://github.com/tide-foundation/heimdall.git
           cd heimdall && git checkout origin/staging && cd ..
+
+      - name: Patch tidecloak-js exports for deep import
+        run: |
+          jq '.exports["./lib/heimdall"] = "./lib/heimdall.js"' tidecloak-js/package.json > temp.json && mv temp.json tidecloak-js/package.json
 
       - name: Prepare tide-modules
         run: |
@@ -73,22 +77,3 @@ jobs:
 
     steps:
       - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 'mechapurse'
-          slot-name: 'Production'
-          package: .
