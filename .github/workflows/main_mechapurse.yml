@@ -32,6 +32,11 @@ jobs:
           git clone https://github.com/tide-foundation/heimdall.git
           cd heimdall && git checkout origin/staging && cd ..
 
+      - name: Copy tide-js into tidecloak-js/modules
+        run: |
+          mkdir -p external/tidecloak-js/modules
+          cp -r tide-js external/tidecloak-js/modules/
+
       - name: Prepare tide-modules
         run: |
           mkdir -p tide-modules/modules
