@@ -1,4 +1,4 @@
-import heimdall = require("../../tidecloak-js/lib/heimdall");
+import heimdall = require("../tidecloak-js/lib/heimdall");
 
 export const base64ToBytes = heimdall.base64ToBytes;
 export const bytesToBase64 = heimdall.bytesToBase64;
