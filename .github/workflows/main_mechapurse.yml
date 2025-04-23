@@ -35,11 +35,12 @@ jobs:
         run: |
           jq '.exports["./lib/heimdall"] = "./lib/heimdall.js"' tidecloak-js/package.json > temp.json && mv temp.json tidecloak-js/package.json
 
-      - name: Link patched tidecloak-js into node_modules
+      - name: Link tidecloak-js globally and locally
         run: |
-          rm -rf node_modules/tidecloak-js
-          mkdir -p node_modules
-          ln -s ../tidecloak-js node_modules/tidecloak-js
+          cd tidecloak-js
+          npm link
+          cd ..
+          npm link tidecloak-js
 
       - name: Prepare tide-modules
         run: |
