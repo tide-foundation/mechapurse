@@ -6,10 +6,9 @@ import { Roles } from "@/app/constants/roles";
 import { RoleRepresentation } from "@/lib/keycloakTypes";
 import { RuleDefinition, RuleSettingDraft, RuleSettings } from "@/interfaces/interface";
 import { AddRuleConfiguration, GetRuleSettingsDraft, GetRuleSettingsDraftById } from "@/lib/db";
-import { base64ToBytes, bytesToBase64, getHumanReadableObject } from "../../../lib/tidecloak";
+import heimdall = require("../../../../../tidecloak-js/lib/heimdall");
 
-
-
+const { base64ToBytes, bytesToBase64, getHumanReadableObject } = heimdall;
 
 const allowedRole = [Roles.Admin];
 
