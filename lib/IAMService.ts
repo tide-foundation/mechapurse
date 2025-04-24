@@ -1,6 +1,5 @@
-import Heimdall, { BaseTideRequest, CardanoTxBodySignRequest, CreateCardanoTxBodySignRequest } from "tidecloak-js"
-import kcData from "../tidecloak.json";
-import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
+import Heimdall from "tidecloak-js"
+import { getAuthServerUrl, getHomeOrkUrl, getRealm, getResource, getVendorId } from "./tidecloakConfig";
 import { InitCertResponse } from "./tidecloakApi";
 import { RuleSettings } from "@/interfaces/interface";
 
@@ -13,8 +12,8 @@ function getKeycloakClient(): typeof Heimdall {
             url: getAuthServerUrl(),
             realm: getRealm(),
             clientId: getResource(),
-            vendorId: kcData['vendorId'],
-            homeOrkUrl: kcData['homeOrkUrl']
+            vendorId: getVendorId(),
+            homeOrkUrl: getHomeOrkUrl()
         });
 
         if (!_tc) {

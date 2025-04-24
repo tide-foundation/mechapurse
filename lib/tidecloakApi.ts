@@ -1,16 +1,16 @@
 import { AuthorizerInfoRequest, RealmKeyRules, RuleDefinition, RuleSettings } from "@/interfaces/interface";
-import kcData from "../tidecloak.json";
 import { ChangeSetRequest, ChangeSetRequestResponse, ClientRepresentation, ComponentRepresentation, MappingsRepresentation, RoleRepresentation, UserRepresentation } from "./keycloakTypes";
 import { TX_MANAGEMENT_CLIENT } from "../app/constants/client";
 import { Roles } from "@/app/constants/roles";
+import { getAuthServerUrl, getRealm, getResource } from "./tidecloakConfig";
 
 export interface InitCertResponse {
     cert: string;
     sig: string;
 }
-const KEYCLOAK_AUTH_SERVER = kcData["auth-server-url"];
-const REALM = kcData["realm"];
-const CLIENT = kcData["resource"]
+const KEYCLOAK_AUTH_SERVER = getAuthServerUrl();
+const REALM = getRealm();
+const CLIENT = getResource();
 
 const TC_URL = `${KEYCLOAK_AUTH_SERVER}/admin/realms/${REALM}`;
 
