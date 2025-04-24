@@ -13,43 +13,67 @@ interface JWK {
     x: string;
 }
 
+export interface TidecloakConfig {
+    realm: string;
+    "auth-server-url": string;
+    "ssl-required": string;
+    resource: string;
+    "public-client": boolean;
+    "confidential-port": number;
+    jwk: {
+      keys: JWK[];
+    };
+    vendorId: string;
+    homeOrkUrl: string;
+}
+const typedKcData = kcData as TidecloakConfig;
+
 /**
  * Get Keycloak Authentication Server URL
  */
 export function getAuthServerUrl(): string {
-    return kcData["auth-server-url"] || "";
+    return typedKcData["auth-server-url"] || "";
 }
 
 /**
  * Get Keycloak Realm Name
  */
 export function getRealm(): string {
-    return kcData["realm"] || "";
+    return typedKcData["realm"] || "";
 }
 
 /**
  * Get Vendor ID
  */
 export function getVendorId(): string {
-    return kcData["vendorId"] || "";
+    return typedKcData["vendorId"] || "";
 }
 
 /**
  * Get Resource
  */
 export function getResource(): string {
-    return kcData["resource"] || "";
+    return typedKcData["resource"] || "";
 }
+
+
+/**
+ * Get home ork url
+ */
+export function getHomeOrkUrl(): string {
+    return typedKcData["homeOrkUrl"] || "";
+}
+
 
 /**
 export function getJWK(): JSONWebKeySet | null {
  */
 export function getJWK(): JSONWebKeySet | null {
-    if (!kcData.jwk || !kcData.jwk.keys || kcData.jwk.keys.length === 0) {
+    if (!typedKcData.jwk || !typedKcData.jwk.keys || typedKcData.jwk.keys.length === 0) {
         console.error("[TideJWT] No keys were found in tidecloak.json. Did you forget to download the client adaptor from TideCloak?");
         return null;
     }
-    return kcData.jwk;
+    return typedKcData.jwk;
 }
 
 /**
