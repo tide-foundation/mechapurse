@@ -1,4 +1,4 @@
-import kcData from "../tidecloak.json";
+import kcData from "/tidecloak.json";
 
 interface JSONWebKeySet {
     keys: JWK[];
