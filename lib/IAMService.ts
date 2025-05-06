@@ -8,13 +8,7 @@ let _tc: typeof Heimdall | null = null;
 function getKeycloakClient(): typeof Heimdall {
     if (!_tc) {
         console.log("[DEBUG] Initializing Heimdall client...");
-        _tc = new Heimdall({
-            url: getAuthServerUrl(),
-            realm: getRealm(),
-            clientId: getResource(),
-            vendorId: getVendorId(),
-            homeOrkUrl: getHomeOrkUrl()
-        });
+        _tc = new Heimdall(tidecloakConfig());
 
         if (!_tc) {
             console.error("[ERROR] Heimdall client failed to initialize!");
