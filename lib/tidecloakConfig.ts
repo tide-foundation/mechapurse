@@ -28,6 +28,30 @@ export interface TidecloakConfig {
 }
 const typedKcData = kcData as TidecloakConfig;
 
+export const tidecloakConfig = () => {
+    const requiredKeys: (keyof TidecloakConfig)[] = [
+        "auth-server-url",
+        "realm",
+        "resource",
+        "vendorId",
+        "homeOrkUrl"
+    ];
+
+    for (const key of requiredKeys) {
+        if (!typedKcData[key]) {
+            throw new Error(`Missing required config value: ${key}`);
+        }
+    }
+
+    return {
+        url: typedKcData["auth-server-url"],
+        realm: typedKcData["realm"],
+        clientId: typedKcData["resource"],
+        vendorId: typedKcData["vendorId"],
+        homeOrkUrl: typedKcData["homeOrkUrl"]
+    };
+};
+
 /**
  * Get Keycloak Authentication Server URL
  */
