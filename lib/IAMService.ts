@@ -7,7 +7,7 @@ let _tc: typeof Heimdall | null = null;
 
 function getKeycloakClient(): typeof Heimdall {
     if (!_tc) {
-        console.log("[DEBUG] Initializing Heimdall client...");
+        console.log("[DEBUG V1] Initializing Heimdall client...");
         const config: ReturnType<typeof tidecloakConfig> = tidecloakConfig();
         console.log("[DEBUG] Tidecloak Config:", config);
         _tc = new Heimdall({ ...config });
