@@ -1,5 +1,5 @@
 import Heimdall from "tidecloak-js"
-import { getAuthServerUrl, getHomeOrkUrl, getRealm, getResource, getVendorId } from "./tidecloakConfig";
+import { getAuthServerUrl, getHomeOrkUrl, getRealm, getResource, getVendorId, tidecloakConfig } from "./tidecloakConfig";
 import { InitCertResponse } from "./tidecloakApi";
 import { RuleSettings } from "@/interfaces/interface";
 
