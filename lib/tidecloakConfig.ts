@@ -39,6 +39,8 @@ export const tidecloakConfig = () => {
 
     for (const key of requiredKeys) {
         if (!typedKcData[key]) {
+            console.error("Config error: missing key", key);
+            console.error("Full typedKcData dump:", JSON.stringify(typedKcData, null, 2));
             throw new Error(`Missing required config value: ${key}`);
         }
     }
@@ -51,6 +53,7 @@ export const tidecloakConfig = () => {
         homeOrkUrl: typedKcData["homeOrkUrl"]
     };
 };
+
 
 /**
  * Get Keycloak Authentication Server URL
