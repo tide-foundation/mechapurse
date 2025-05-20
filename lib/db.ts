@@ -1,3 +1,4 @@
+import path from 'path';
 import Database from 'better-sqlite3';
 import {
   DraftSignRequest,
@@ -7,7 +8,8 @@ import {
   RuleSettingAuthorization,
 } from '@/interfaces/interface';
 
-const db = new Database('./database.sqlite');
+const dbPath = path.join(__dirname, 'database.sqlite');
+const db = new Database(dbPath);
 initializeDatabase();
 
 // Row Types
