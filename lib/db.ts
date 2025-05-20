@@ -8,7 +8,8 @@ import {
   RuleSettingAuthorization,
 } from '@/interfaces/interface';
 
-const dbPath: string = path.join(__dirname, '..', 'db', 'database.sqlite');
+const dbPath = path.join(process.cwd(), 'db', 'database.sqlite');
+console.log(dbPath)
 const db = new Database(dbPath);
 initializeDatabase();
 
