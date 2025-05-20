@@ -9,7 +9,8 @@ import { loadCardanoWasm } from "@/config/cardanoWasmConfig";
 import { parseCookies } from "@/lib/utils";
 
 const allowedRoles = [Roles.User, Roles.Admin];
-const KOIOS_API_URL = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
+const KOIOS_API_URL = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/api/v1";
+const isPreprod = KOIOS_API_URL.includes("preprod");
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -51,8 +52,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Construct sender address
     const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
     const publicKeyHash = publicKey.hash();
+
+    const networkId = isPreprod
+      ? CardanoWasm.NetworkInfo.testnet_preprod().network_id()
+      : CardanoWasm.NetworkInfo.mainnet().network_id();
+
     const enterpriseAddress = CardanoWasm.EnterpriseAddress.new(
-      CardanoWasm.NetworkInfo.testnet_preprod().network_id(),
+      networkId,
       CardanoWasm.Credential.from_keyhash(publicKeyHash)
     );
     const senderAddress = enterpriseAddress.to_address().to_bech32();

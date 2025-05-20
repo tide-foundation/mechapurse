@@ -7,7 +7,7 @@ import { loadCardanoWasm } from "@/config/cardanoWasmConfig";
 import { parseCookies } from "@/lib/utils";
 
 const allowedRoles = [Roles.User, Roles.Admin];
-const KOIOS_API_URL = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
+const KOIOS_API_URL = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/api/v1";
 
 async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<string> {
   const response = await fetch(`${KOIOS_API_URL}/submittx`, {

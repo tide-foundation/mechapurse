@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { AddAuthorization } from "@/lib/db";
 
 const allowedRoles = [Roles.User, Roles.Admin];
-const KOIOS_API_URL: string = process.env.KOIOS_API_URL || "https://preprod.koios.rest/api/v1";
+const KOIOS_API_URL: string = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/api/v1";
 
 
 
