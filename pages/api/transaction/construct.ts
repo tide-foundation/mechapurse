@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       )
     );
 
-    txBuilder.add_inputs_from(txUnspentOutputs, 1);
+    txBuilder.add_inputs_from(txUnspentOutputs, 2); // LargestFirstMultiAsset
 
     const minFee = txBuilder.min_fee();
     const adjustedFee = minFee.checked_add(CardanoWasm.BigNum.from_str("2000"));
