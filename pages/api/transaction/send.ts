@@ -12,7 +12,9 @@ const KOIOS_API_URL = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/a
 async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<string> {
   const response = await fetch(`${KOIOS_API_URL}/submittx`, {
     method: "POST",
-    headers: { "Content-Type": "application/cbor" },
+    headers: { "Content-Type": "application/cbor",
+      "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
+     },
     body: transactionBytes,
   });
 

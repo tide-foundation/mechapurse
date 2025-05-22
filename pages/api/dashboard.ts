@@ -48,7 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const balanceResponse = await fetch(`${KOIOS_API_URL}/address_info`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
+           },
           body: JSON.stringify({ _addresses: [walletAddress] }),
         });
 
@@ -68,7 +70,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const txResponse = await fetch(`${KOIOS_API_URL}/address_txs`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
+          },
           body: JSON.stringify({ _addresses: [walletAddress] }),
         });
 
@@ -81,7 +85,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           txData.map(async (tx: any) => {
             const utxoResponse = await fetch(`${KOIOS_API_URL}/tx_utxos`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
+              },
               body: JSON.stringify({ _tx_hashes: [tx.tx_hash] }),
             });
 
