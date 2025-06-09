@@ -1,6 +1,6 @@
 # MechaPurse - Crypto Walletless Wallet
 
-MechaPurse is a next-generation cryptocurrency wallet purpose-built for the Cardano network. It aims to fundamentally transform how digital treasuries are managed, accessed, and governed by combining the performance and finality of Hedera with the unprecedented security guarantees of TideCloak’s decentralized Identity, Immunity, and Access Management (IIAM) system. The MechaPurse platform allows DAOs, foundations, and blockchain-native communities to manage treasuries, distribute funds, and delegate responsibilities - all while eliminating the possibility of unauthorized access, internal compromise, or governance abuse. It also pioneers a fully-integrated, decentralized identity and authorization system (TideCloak's BYOiD and Quorum-Enforced Authorization), making it the first verifiably tamperproof treasury management system.
+MechaPurse is a next-generation cryptocurrency wallet purpose-built for the Cardano network. It aims to fundamentally transform how digital treasuries are managed, accessed, and governed by combining the performance and finality of Cardano with the unprecedented security guarantees of TideCloak’s decentralized Identity, Immunity, and Access Management (IIAM) system. The MechaPurse platform allows DAOs, foundations, and blockchain-native communities to manage treasuries, distribute funds, and delegate responsibilities - all while eliminating the possibility of unauthorized access, internal compromise, or governance abuse. It also pioneers a fully-integrated, decentralized identity and authorization system (TideCloak's BYOiD and Quorum-Enforced Authorization), making it the first verifiably tamperproof treasury management system.
 
 Unlike traditional wallets or key management systems, MechaPurse requires no wallet downloads, no plugins, and no key storage. Every user interaction is protected and authorized via TideCloak’s decentralized cryptographic fabric, ensuring access can only occur through zero-knowledge authentication and quorum-approved governance - with no key ever held or managed by any party.
 
@@ -49,7 +49,7 @@ The MechaPurse platform includes the following key modules:
 
 3. Self-Sovereign, Composable Identity Framework
 
-   MechaPurse integrates Tide BYOiD, a user-centric, decentralized authentication mechanism that offers Hedera applications a privacy-preserving identity system that requires no change to the user experience, no centralized authentication, and no platform-side secrets to secure.
+   MechaPurse integrates Tide BYOiD, a user-centric, decentralized authentication mechanism that offers Cardano applications a privacy-preserving identity system that requires no change to the user experience, no centralized authentication, and no platform-side secrets to secure.
 
 4. Eliminates the Need for Central Admins or Root Privileges
 
