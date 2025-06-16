@@ -25,8 +25,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const type = req.query.type as string;
   const walletAddress = req.query.wallet as string;
 
+  const headers = {
+    "Content-Type": "application/json",
+    ...(process.env.KOIOS_JWT && {
+      Authorization: `Bearer ${process.env.KOIOS_JWT}`,
+    }),
+  };
+
   try {
     switch (type) {
+
       case "wallet": {
         const publicKey = CardanoWasm.PublicKey.from_bytes(base64UrlToBytes(getPublicKey()));
         const publicKeyHash = publicKey.hash();
@@ -48,9 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const balanceResponse = await fetch(`${KOIOS_API_URL}/address_info`, {
           method: "POST",
-          headers: { "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-           },
+          headers,
           body: JSON.stringify({ _addresses: [walletAddress] }),
         });
 
@@ -70,9 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const txResponse = await fetch(`${KOIOS_API_URL}/address_txs`, {
           method: "POST",
-          headers: { "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-          },
+          headers,
           body: JSON.stringify({ _addresses: [walletAddress] }),
         });
 
@@ -85,9 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           txData.map(async (tx: any) => {
             const utxoResponse = await fetch(`${KOIOS_API_URL}/tx_utxos`, {
               method: "POST",
-              headers: { "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-              },
+              headers,
               body: JSON.stringify({ _tx_hashes: [tx.tx_hash] }),
             });
 

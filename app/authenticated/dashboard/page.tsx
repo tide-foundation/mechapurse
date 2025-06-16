@@ -134,16 +134,10 @@ export default function Dashboard() {
   };
 
 
-  // Initial fetch and polling
+  // Initial fetch
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
       fetchWalletData();
-      // Poll every 30 seconds to refresh all on-screen data
-      const pollingInterval = setInterval(() => {
-        fetchWalletData();
-      }, 30000);
-
-      return () => clearInterval(pollingInterval);
     }
   }, [isAuthenticated, isLoading, walletAddress]);
 

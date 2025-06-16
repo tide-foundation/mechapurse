@@ -10,11 +10,16 @@ const allowedRoles = [Roles.User, Roles.Admin];
 const KOIOS_API_URL = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/api/v1";
 
 async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<string> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(process.env.KOIOS_JWT && {
+      Authorization: `Bearer ${process.env.KOIOS_JWT}`,
+    }),
+  };
+
   const response = await fetch(`${KOIOS_API_URL}/submittx`, {
     method: "POST",
-    headers: { "Content-Type": "application/cbor",
-      "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-     },
+    headers,
     body: transactionBytes,
   });
 

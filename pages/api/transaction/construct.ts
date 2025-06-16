@@ -101,11 +101,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getCurrentSlotNumber(CardanoWasm: any): Promise<any> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(process.env.KOIOS_JWT && {
+      Authorization: `Bearer ${process.env.KOIOS_JWT}`,
+    }),
+  };
+
   const response = await fetch(`${KOIOS_API_URL}/tip`, {
     method: "GET",
-    headers: { "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-     },
+    headers,
   });
 
   if (!response.ok) throw new Error(`Failed to fetch current slot`);
@@ -115,12 +120,16 @@ async function getCurrentSlotNumber(CardanoWasm: any): Promise<any> {
 }
 
 async function getTxUnspentOutputs(CardanoWasm: any, address: string): Promise<any> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(process.env.KOIOS_JWT && {
+      Authorization: `Bearer ${process.env.KOIOS_JWT}`,
+    }),
+  };
+
   const response = await fetch(`${KOIOS_API_URL}/address_info`, {
     method: "POST",
-    headers: { "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.KOIOS_JWT}`,
-
-     },
+    headers,
     body: JSON.stringify({ _addresses: [address] }),
   });
 
