@@ -11,7 +11,7 @@ const KOIOS_API_URL = process.env.KOIOS_API_URL ?? "https://preprod.koios.rest/a
 
 async function submitSignedTransaction(transactionBytes: Uint8Array): Promise<string> {
   const headers = {
-    "Content-Type": "application/json",
+    "Content-Type": "application/cbor",
     ...(process.env.KOIOS_JWT && {
       Authorization: `Bearer ${process.env.KOIOS_JWT}`,
     }),
