@@ -1,21 +1,22 @@
-import Heimdall from "tidecloak-js"
+import TideCloak from "tidecloak-js";
 import { getAuthServerUrl, getHomeOrkUrl, getRealm, getResource, getVendorId, tidecloakConfig } from "./tidecloakConfig";
 import { InitCertResponse } from "./tidecloakApi";
 import { RuleSettings } from "@/interfaces/interface";
 
-let _tc: typeof Heimdall | null = null;
 
-function getKeycloakClient(): typeof Heimdall {
+let _tc: typeof TideCloak | null = null;
+
+function getKeycloakClient(): typeof TideCloak {
     if (!_tc) {
-        console.log("[DEBUG V1] Initializing Heimdall client...");
+        console.log("[DEBUG V1] Initializing TideCloak client...");
         const config: ReturnType<typeof tidecloakConfig> = tidecloakConfig();
         console.log("[DEBUG] Tidecloak Config:", config);
-        _tc = new Heimdall({ ...config });
+        _tc = new TideCloak({ ...config });
 
         if (!_tc) {
-            console.error("[ERROR] Heimdall client failed to initialize!");
+            console.error("[ERROR] TideCloak client failed to initialize!");
         } else {
-            console.log("[DEBUG] Heimdall client initialized:", _tc);
+            console.log("[DEBUG] TideCloak client initialized:", _tc);
         }
     }
     return _tc;
@@ -219,13 +220,6 @@ export const createRuleSettingsDraft = (ruleSettings: string, previousRuleSettin
     return tidecloak.createRuleSettingsDraft(ruleSettings, previousRuleSetting, previousRuleSettingCert);
 }
 
-export const signRuleSettingsDraft = async (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
-    const tidecloak = getKeycloakClient();
-    if (!tidecloak) { return null; }
-
-    return await tidecloak.signRuleSettings(ruleReq, authorizers, ruleSettings, expiry, initCert);
-}
-
 const IAMService = {
     initIAM,
     doLogin,
@@ -241,7 +235,6 @@ const IAMService = {
     createTxDraft,
     signTxDraft,
     createRuleSettingsDraft,
-    signRuleSettingsDraft,
     processThresholdRules
 };
 

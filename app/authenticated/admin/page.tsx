@@ -22,7 +22,7 @@ import {
   UserUpdate,
 } from "@/interfaces/interface";
 import styles from "@/styles/AdminDashboard.module.css";
-import { Heimdall } from "@/tide-modules/modules/heimdall";
+import { ApprovalEnclave } from "tidecloak-js";
 import { useAuth } from "@/components/AuthContext";
 import { addRuleSettingDraftRequest, createAuthorization } from "@/app/utils/helperMethods";
 import { RuleSetCard } from "@/components/admin/RuleSetCard";
@@ -323,7 +323,14 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Failed to save global settings");
 
       const reqDraft = await res.json();
-      const heimdall = new Heimdall(reqDraft.uri, [vuid]);
+      const orkURL = new URL(reqDraft.uri);
+      const heimdall = new ApprovalEnclave({
+          homeOrkOrigin: orkURL.origin,
+          voucherURL: "",
+          signed_client_origin: "",
+          vendorId: ""
+        }).init([vuid], reqDraft.uri);
+
       const draft = createRuleSettingsDraft(
         reqDraft.settings,
         reqDraft.previousRuleSetting,
@@ -333,13 +340,12 @@ export default function AdminDashboard() {
       if (draftReq === null) {
         throw new Error("No rule sign draft req");
       }
-      await heimdall.openEnclave();
 
       const authApproval = await heimdall.getAuthorizerApproval(draft, "Rules:1", draftReq.expiry, "base64");
 
       if (authApproval.accepted) {
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
-        heimdall.closeEnclave();
+        heimdall.close();
         const data = await createAuthorization(authApproval.data, authzAuthn, "rules");
         const threshold = Number(reqDraft.threshold);
 
@@ -604,8 +610,13 @@ export default function AdminDashboard() {
         body: JSON.stringify(changeRequest),
       });
       const res = (await response.json()).response;
-      const heimdall = new Heimdall(res.customDomainUri, [vuid]);
-      await heimdall.openEnclave();
+      const orkURL = new URL(res.customDomainUri);
+      const heimdall = new ApprovalEnclave({
+          homeOrkOrigin: orkURL.origin,
+          voucherURL: "",
+          signed_client_origin: "",
+          vendorId: ""
+        }).init([vuid], res.customDomainUri);
       const authorizerApproval = await heimdall.getAuthorizerApproval(
         res.changeSetRequests,
         "UserContext:1",
@@ -614,13 +625,13 @@ export default function AdminDashboard() {
       );
       if (authorizerApproval.draft === res.changeSetRequests) {
         if (authorizerApproval.accepted === false) {
-          heimdall.closeEnclave();
+          heimdall.close();
           await fetch("/api/admin/change-requests/addRejection", {
             method: "POST",
             body: JSON.stringify({ changeRequest: changeRequest }),
           });
         } else if (authorizerApproval.accepted === true) {
-          heimdall.closeEnclave();
+          heimdall.close();
           const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
           await fetch("/api/admin/change-requests/addAuthorization", {
             method: "POST",
@@ -639,8 +650,13 @@ export default function AdminDashboard() {
         body: JSON.stringify(cr),
       });
       const res = (await response.json());
-      const heimdall = new Heimdall(res.customDomainUri, [vuid]);
-      await heimdall.openEnclave();
+      const orkURL = new URL(res.customDomainUri);
+      const heimdall = new ApprovalEnclave({
+          homeOrkOrigin: orkURL.origin,
+          voucherURL: "",
+          signed_client_origin: "",
+          vendorId: ""
+        }).init([vuid], res.customDomainUri);
       const authorizerApproval = await heimdall.getAuthorizerApproval(
         res.draft,
         "Rules:1",
@@ -649,13 +665,13 @@ export default function AdminDashboard() {
       );
       if (authorizerApproval.draft === res.draft) {
         if (authorizerApproval.accepted === false) {
-          heimdall.closeEnclave();
+          heimdall.close();
           await fetch("/api/admin/change-requests/rules/authorization", {
             method: "POST",
             body: JSON.stringify({ ruleReqDraftId: cr.id, vuid: vuid, authorization: null, rejected: true }),
           });
         } else if (authorizerApproval.accepted === true) {
-          heimdall.closeEnclave();
+          heimdall.close();
           const authorizerAuthentication = await heimdall.getAuthorizerAuthentication();
           const data = await createAuthorization(authorizerApproval.data, authorizerAuthentication, "rules");
 

@@ -1,6 +1,10 @@
+import { ApprovalEnclave, RequestEnclave } from "tidecloak-js";
+
 declare module "tidecloak-js" {
     const content: any;
     export default content;
+
+    export {RequestEnclave, ApprovalEnclave};
 
     /**
      * Base class for all Tide requests.

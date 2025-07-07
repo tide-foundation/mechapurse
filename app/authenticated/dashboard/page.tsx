@@ -5,7 +5,7 @@ import { useAuth } from "@/components/AuthContext";
 import { useRouter } from "next/navigation";
 import { Transaction } from "@/types/Transactions";
 import { AdminAuthorizationPack, DraftSignRequest } from "@/interfaces/interface";
-import { Heimdall } from "@/tide-modules/modules/heimdall";
+import { ApprovalEnclave } from "tidecloak-js";
 import {
   createAuthorization,
   addAdminAuth,
@@ -173,18 +173,23 @@ export default function Dashboard() {
 
       if(requestSettings !== null && authzList.length  < requestSettings.threshold) {
         const expiry = draft.expiry;
-        const heimdall = new Heimdall(data.uri, [vuid]);
-        await heimdall.openEnclave();
+        const orkURL = new URL(data.uri);
+        const heimdall = new ApprovalEnclave({
+          homeOrkOrigin: orkURL.origin,
+          voucherURL: "",
+          signed_client_origin: "",
+          vendorId: ""
+        }).init([vuid], data.uri);
         const authApproval = await heimdall.getAuthorizerApproval(draft.draft, "CardanoTx:1", expiry, "base64");
   
         if (authApproval.accepted === true) {
-          heimdall.closeEnclave();
+          heimdall.close();
           const authzAuthn = await heimdall.getAuthorizerAuthentication();  
           const authData = await createAuthorization(authApproval.data, authzAuthn);
           const authorization = await addAdminAuth(draft.id, vuid, authData.authorization, false);
           authzList.push(authorization.auth)
         } else {
-          heimdall.closeEnclave();
+          heimdall.close();
           await addAdminAuth(draft.id, vuid, "", true);
           toast.info("Request denied. Your response has been logged.");
           return;

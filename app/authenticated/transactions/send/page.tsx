@@ -7,7 +7,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import { ImSpinner8 } from "react-icons/im";
-import { Heimdall } from "@/tide-modules/modules/heimdall";
+import { ApprovalEnclave } from "tidecloak-js";
 import { useAuth } from "@/components/AuthContext";
 import { DraftSignRequest } from "@/interfaces/interface.js";
 import { transformCardanoTxBody } from "@/app/utils/helperMethods";
@@ -127,12 +127,17 @@ export default function Send() {
       const txbody = data.data;
       if (!response.ok) throw new Error(data.error || "Transaction failed");
 
-      const heimdall = new Heimdall(data.uri, [vuid]);
+      const orkURL = new URL(data.uri);
+        const heimdall = new ApprovalEnclave({
+          homeOrkOrigin: orkURL.origin,
+          voucherURL: "",
+          signed_client_origin: "",
+          vendorId: ""
+        }).init([vuid], data.uri);
       const draft = createTxDraft(data.data);
 
       const draftReq = await addDraftRequest(vuid, txbody, draft, data.draftJson);
 
-      await heimdall.openEnclave();
       const authApproval = await heimdall.getAuthorizerApproval(
         draft,
         "CardanoTx:1",
@@ -141,7 +146,7 @@ export default function Send() {
       );
 
       if (authApproval.accepted === true) {
-        heimdall.closeEnclave();
+        heimdall.close();
         const authzAuthn = await heimdall.getAuthorizerAuthentication();
 
         const authData = await createAuthorization(
@@ -186,13 +191,14 @@ export default function Send() {
         );
       }
       else {
-        heimdall.closeEnclave();
+        heimdall.close();
         await addAdminAuth(draftReq.id, vuid, "", true);
         toast.info("Request denied. Your response has been logged.");
         return;
       }
 
     } catch (err: any) {
+      console.error(err);
       let errorMessage: string;
       if (typeof err === "string") {
         errorMessage = err;
