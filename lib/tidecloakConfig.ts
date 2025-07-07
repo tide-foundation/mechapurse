@@ -25,6 +25,7 @@ export interface TidecloakConfig {
     };
     vendorId: string;
     homeOrkUrl: string;
+    [key: string]: any;
 }
 const typedKcData = kcData as TidecloakConfig;
 
@@ -34,7 +35,7 @@ export const tidecloakConfig = () => {
         "realm",
         "resource",
         "vendorId",
-        "homeOrkUrl"
+        "homeOrkUrl",
     ];
 
     for (const key of requiredKeys) {
@@ -50,7 +51,8 @@ export const tidecloakConfig = () => {
         realm: typedKcData["realm"],
         clientId: typedKcData["resource"],
         vendorId: typedKcData["vendorId"],
-        homeOrkUrl: typedKcData["homeOrkUrl"]
+        homeOrkUrl: typedKcData["homeOrkUrl"],
+        clientOriginAuth: typedKcData["client-origin-auth-" + window.location.origin]
     };
 };
 
