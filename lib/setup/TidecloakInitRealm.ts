@@ -50,7 +50,7 @@ export async function setUpTideRealm(token: string, realm: string, email = "emai
         body: new URLSearchParams({ email }),
     });
 
-    await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/tideAdminResources/toggle-iga`, {
+    await fetch(`${TIDECLOAK_LOCAL_URL}/admin/realms/${realm}/tide-admin/toggle-iga`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: new URLSearchParams({ isIGAEnabled: "true" }),
