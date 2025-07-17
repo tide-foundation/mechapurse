@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createApprovalURI, getAdminThreshold, getRealmKeyRules, getTransactionRoles, getUserByVuid, saveAndSignRules } from "@/lib/tidecloakApi";
 import { verifyTideCloakToken } from "@/lib/tideJWT";
 import { cookies } from "next/headers";
 import { Roles } from "@/app/constants/roles";
-import { RoleRepresentation } from "@/lib/keycloakTypes";
-import { RuleDefinition, RuleSettingDraft, RuleSettings } from "@/interfaces/interface";
-import { AddRuleConfiguration, DeleteRuleSettingsDraft, GetRuleSettingsDraft, GetRuleSettingsDraftById } from "@/lib/db";
-import { base64ToBytes, bytesToBase64, getHumanReadableObject } from "tidecloak-js";
+import { DeleteRuleSettingsDraft } from "@/lib/db";
 
 const allowedRole = [Roles.Admin];
 

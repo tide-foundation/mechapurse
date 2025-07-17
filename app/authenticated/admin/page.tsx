@@ -151,7 +151,7 @@ interface UserChangeRecord {
 
 // --- Main AdminDashboard Component ---
 export default function AdminDashboard() {
-  const { vuid, createRuleSettingsDraft, signRuleSettingsDraft } = useAuth();
+  const { vuid, createRuleSettingsDraft } = useAuth();
   const router = useRouter();
   const [view, setView] = useState("settings");
   const [activeTab, setActiveTab] = useState("user"); // "user" or "rules"

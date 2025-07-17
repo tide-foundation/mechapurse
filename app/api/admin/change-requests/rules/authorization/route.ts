@@ -6,7 +6,6 @@ import { Roles } from "@/app/constants/roles";
 import { RoleRepresentation } from "@/lib/keycloakTypes";
 import { RuleDefinition, RuleSettingAuthorization, RuleSettingDraft, RuleSettings } from "@/interfaces/interface";
 import { AddRuleSettingsAuthorization, AddRuleConfiguration, GetRuleSettingsAuthorizationByDraftId, GetRuleSettingsDraft, UpdateRuleSettingDraftStatusById } from "@/lib/db";
-import { base64ToBytes, bytesToBase64, getHumanReadableObject } from "tidecloak-js";
 
 const allowedRole = [Roles.Admin];
 

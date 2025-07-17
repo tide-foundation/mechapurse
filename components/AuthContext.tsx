@@ -16,7 +16,6 @@ interface AuthContextType {
     createTxDraft: (txBody: string) => string;
     signTxDraft: (txBody: string, authorizers: string[], ruleSettings: string, expiry: string) => Promise<string>;
     createRuleSettingsDraft: (ruleSettings: string, previousRuleSetting: string, previousRuleSettingCert: string) => string;
-    signRuleSettingsDraft: (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => Promise<string>;
     canProcessRequest: (
         ruleSettings: RuleSettings,
         draftJson: string
@@ -85,11 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return IAMService.createRuleSettingsDraft(ruleSettings, previousRuleSetting, previousRuleSettingCert);
     }
 
-
-    const signRuleSettingsDraft = async (ruleReq: string, authorizers: string[], ruleSettings: string, expiry: string, initCert: InitCertResponse) => {
-        return await IAMService.signRuleSettingsDraft(ruleReq, authorizers, ruleSettings, expiry, initCert);
-    }
-
     const canProcessRequest = async (
         ruleSettings: any,
         draftJson: string
@@ -114,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, signRuleSettingsDraft, walletAddressHex, walletAddress, canProcessRequest, processThresholdRules }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, hasRole, vuid, createTxDraft, signTxDraft, createRuleSettingsDraft, walletAddressHex, walletAddress, canProcessRequest, processThresholdRules }}>
             {children}
         </AuthContext.Provider>
     );
