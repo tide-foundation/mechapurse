@@ -71,11 +71,12 @@ export async function POST(req: NextRequest) {
                 const rulesAuth = await createAuthorization(REALM_MGMT, authorizerApproval, authorizerAuthentication, token);
                 const initCert = await getTideRealmAdminInitCert(token);
                 return NextResponse.json({ authorization: rulesAuth, initCert: initCert });
+            default:
+                return NextResponse.json({ error: "Invalid request type" }, { status: 400 });
         }
 
     } catch (err) {
         console.error("Internal Server Error:", err);
         return NextResponse.json({ error: "Internal Server Error: " + err }, { status: 500 });
     }
-
 }
