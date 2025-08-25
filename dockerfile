@@ -35,6 +35,7 @@ RUN npm prune --omit=dev && npm cache clean --force
 # Bring the built app (no source needed)
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/tidecloak.json ./tidecloak.json:
 
 # Use the non-root 'node' user provided by the base image
 USER node
