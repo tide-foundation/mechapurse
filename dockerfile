@@ -1,48 +1,44 @@
-# ---- Base image (Alpine) ----
+# ---------- Base ----------
 FROM node:20-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-# Helps with some native deps (e.g., sharp) on Alpine
+# Helpful for native deps & musl environments
 RUN apk add --no-cache libc6-compat
 
-# ---- Deps stage: install ALL deps (incl. dev) for building ----
+# ---------- Deps (install all deps; lockfile can be regenerated) ----------
 FROM base AS deps
+# Toolchain for native modules like better-sqlite3/sharp when prebuilds aren't used
+RUN apk add --no-cache --virtual .build-deps python3 make g++ pkgconf
 COPY package*.json ./
-RUN npm ci
-# Ensure TypeScript exists if you have next.config.ts but no TS in devDeps
-RUN node -e "try{require.resolve('typescript')}catch(e){process.exit(1)}" || npm i -D typescript
+# Use npm install (not ci) so mismatched lockfiles don't break the build
+RUN npm install
 
-# ---- Build stage ----
+# ---------- Build ----------
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build your Next app (uses dev deps from deps stage)
 RUN npm run build
 
-# ---- Runtime stage: production-only, non-root ----
+# ---------- Runtime (prod-only, slim) ----------
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# Install ONLY production deps into a clean layer
+# Keep runtime small: start from a clean layer
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Bring over deps and then prune devDependencies out
+COPY --from=deps /app/node_modules ./node_modules
+RUN npm prune --omit=dev && npm cache clean --force
 
-# Bring over the built app
+# Bring the built app (no source needed)
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
-# Run as the precreated non-root 'node' user from the Node image
+# Use the non-root 'node' user provided by the base image
 USER node
 
-# Informational (Azure Container Apps will map this)
 EXPOSE 3000
-
-# Optional healthcheck: uncomment after you add /healthz
-# HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-#   CMD wget -qO- http://127.0.0.1:${PORT}/healthz || exit 1
-
-# Start the app. Your package.json "start" should be "next start -p 3000"
+# package.json "start" should be:  "next start -p 3000"
 CMD ["npm", "start"]
